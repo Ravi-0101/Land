@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClayEstates — Buy & Sell Land</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    /* ─── CLAYMORPHISM DESIGN TOKENS (unchanged) ─── */
+    :root {
+      --clay-canvas: #F4F1FA;
+      --clay-foreground: #332F3A;
+      --clay-muted: #635F69;
+      --clay-accent: #7C3AED;
+      --clay-accent-alt: #DB2777;
+      --clay-accent-tertiary: #0EA5E9;
+      --clay-success: #10B981;
+      --clay-warning: #F59E0B;
+      --clay-card-bg: rgba(255, 255, 255, 0.65);
+      --clay-radius-card: 32px;
+      --clay-radius-btn: 20px;
+      --clay-radius-input: 20px;
+      --clay-radius-large: 48px;
+      --clay-radius-hero: 60px;
+      --shadow-clay-card:
+        16px 16px 32px rgba(160, 150, 180, 0.20),
+        -10px -10px 24px rgba(255, 255, 255, 0.90),
+        inset 6px 6px 12px rgba(139, 92, 246, 0.03),
+        inset -6px -6px 12px rgba(255, 255, 255, 1);
+      --shadow-clay-button:
+        12px 12px 24px rgba(139, 92, 246, 0.30),
+        -8px -8px 16px rgba(255, 255, 255, 0.40),
+        inset 4px 4px 8px rgba(255, 255, 255, 0.40),
+        inset -4px -4px 8px rgba(0, 0, 0, 0.10);
+      --shadow-clay-button-hover:
+        16px 16px 32px rgba(139, 92, 246, 0.35),
+        -10px -10px 20px rgba(255, 255, 255, 0.50),
+        inset 4px 4px 8px rgba(255, 255, 255, 0.40),
+        inset -4px -4px 8px rgba(0, 0, 0, 0.10);
+      --shadow-clay-pressed:
+        inset 10px 10px 20px #d9d4e3,
+        inset -10px -10px 20px #ffffff;
+      --shadow-clay-card-hover:
+        20px 20px 40px rgba(160, 150, 180, 0.25),
+        -14px -14px 28px rgba(255, 255, 255, 0.95),
+        inset 6px 6px 12px rgba(139, 92, 246, 0.04),
+        inset -6px -6px 12px rgba(255, 255, 255, 1);
+      --shadow-clay-deep:
+        30px 30px 60px #cdc6d9,
+        -30px -30px 60px #ffffff,
+        inset 10px 10px 20px rgba(139, 92, 246, 0.05),
+        inset -10px -10px 20px rgba(255, 255, 255, 0.80);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--clay-canvas);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--clay-foreground);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-nunito { font-family: 'Nunito', sans-serif; }
+    @keyframes clay-float { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(2deg); } }
+    @keyframes clay-float-delayed { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-15px) rotate(-2deg); } }
+    @keyframes clay-float-slow { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-30px) rotate(5deg); } }
+    @keyframes clay-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+    @keyframes clay-float-orbit { 0% { transform: translate(0,0) rotate(0deg); } 25% { transform: translate(10px,-15px) rotate(2deg); } 50% { transform: translate(0,-25px) rotate(0deg); } 75% { transform: translate(-10px,-10px) rotate(-2deg); } 100% { transform: translate(0,0) rotate(0deg); } }
+    .animate-clay-float { animation: clay-float 8s ease-in-out infinite; }
+    .animate-clay-float-delayed { animation: clay-float-delayed 10s ease-in-out infinite; }
+    .animate-clay-float-slow { animation: clay-float-slow 12s ease-in-out infinite; }
+    .animate-clay-breathe { animation: clay-breathe 6s ease-in-out infinite; }
+    .animate-clay-orbit { animation: clay-float-orbit 14s ease-in-out infinite; }
+    .animation-delay-2000 { animation-delay: 2s; }
+    .animation-delay-4000 { animation-delay: 4s; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #e8e4f0; border-radius: 999px; }
+    ::-webkit-scrollbar-thumb { background: var(--clay-accent); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #6d28d9; }
+    .shadow-clay-card { box-shadow: var(--shadow-clay-card); }
+    .shadow-clay-card-hover { box-shadow: var(--shadow-clay-card-hover); }
+    .shadow-clay-button { box-shadow: var(--shadow-clay-button); }
+    .shadow-clay-button-hover { box-shadow: var(--shadow-clay-button-hover); }
+    .shadow-clay-pressed { box-shadow: var(--shadow-clay-pressed); }
+    .shadow-clay-deep { box-shadow: var(--shadow-clay-deep); }
+    .clay-transition { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .clay-transition-fast { transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .clay-squish:active { transform: scale(0.92) !important; box-shadow: var(--shadow-clay-pressed) !important; }
+    .clay-card {
+      background: var(--clay-card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: var(--clay-radius-card);
+      box-shadow: var(--shadow-clay-card);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .clay-card:hover { box-shadow: var(--shadow-clay-card-hover); transform: translateY(-6px); }
+    .clay-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 700; letter-spacing: 0.01em;
+      border-radius: var(--clay-radius-btn);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer; border: none; font-family: 'DM Sans', sans-serif;
+      height: 56px; padding: 0 32px; font-size: 1rem; min-height: 44px;
+    }
+    .clay-btn-primary { background: linear-gradient(135deg, #A78BFA, #7C3AED); color: #fff; box-shadow: var(--shadow-clay-button); }
+    .clay-btn-primary:hover { transform: translateY(-3px); box-shadow: var(--shadow-clay-button-hover); }
+    .clay-btn-primary:active { transform: scale(0.92) !important; box-shadow: var(--shadow-clay-pressed) !important; }
+    .clay-btn-secondary { background: #fff; color: var(--clay-foreground); box-shadow: var(--shadow-clay-button); }
+    .clay-btn-secondary:hover { transform: translateY(-3px); box-shadow: var(--shadow-clay-button-hover); }
+    .clay-btn-secondary:active { transform: scale(0.92) !important; box-shadow: var(--shadow-clay-pressed) !important; }
+    .clay-btn-outline { background: transparent; color: var(--clay-accent); border: 2px solid rgba(124,58,237,0.25); box-shadow: none; }
+    .clay-btn-outline:hover { background: rgba(124,58,237,0.06); border-color: var(--clay-accent); transform: translateY(-2px); }
+    .clay-btn-outline:active { transform: scale(0.92) !important; }
+    .clay-btn-sm { height: 44px; padding: 0 20px; font-size: 0.875rem; }
+    .clay-btn-lg { height: 64px; padding: 0 40px; font-size: 1.125rem; }
+    .clay-input {
+      width: 100%; height: 64px; border: none;
+      border-radius: var(--clay-radius-input);
+      background: #EFEBF5; padding: 0 24px; font-size: 1.125rem;
+      color: var(--clay-foreground);
+      box-shadow: var(--shadow-clay-pressed);
+      transition: all 0.25s ease;
+      font-family: 'DM Sans', sans-serif; outline: none;
+      box-sizing: border-box; overflow: visible; text-overflow: clip;
+    }
+    .clay-input::placeholder { color: var(--clay-muted); }
+    .clay-input:focus { background: #fff; box-shadow: var(--shadow-clay-pressed), 0 0 0 4px rgba(124,58,237,0.15); }
+    input, textarea, select { user-select: text; }
+    input:focus, textarea:focus, select:focus { caret-color: #7C3AED; }
+    .clay-blob-container { pointer-events: none; position: fixed; inset: 0; overflow: hidden; z-index: 0; }
+    .clay-blob { position: absolute; border-radius: 9999px; filter: blur(80px); opacity: 0.12; width: 60vh; height: 60vh; }
+    @media (max-width: 640px) {
+      .clay-card { border-radius: 24px; }
+      .clay-btn { height: 48px; padding: 0 20px; font-size: 0.875rem; }
+      .clay-btn-lg { height: 56px; padding: 0 28px; font-size: 1rem; }
+      .clay-input { height: 54px; font-size: 1rem; padding: 0 18px; }
+    }
+    .clay-focus-ring:focus-visible { outline: 4px solid rgba(124,58,237,0.30); outline-offset: 2px; }
+    .clay-text-gradient {
+      background: linear-gradient(135deg, var(--clay-foreground) 20%, var(--clay-accent) 60%, var(--clay-accent-alt));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .shimmer { background: linear-gradient(90deg, #f0ecf5 25%, #e8e2f0 50%, #f0ecf5 75%); background-size: 200% 100%; animation: shimmer 1.8s ease-in-out infinite; }
+    .clay-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; background: rgba(124,58,237,0.10); color: var(--clay-accent); backdrop-filter: blur(4px); border: 1px solid rgba(124,58,237,0.12); }
+    .clay-badge-success { background: rgba(16,185,129,0.12); color: var(--clay-success); border-color: rgba(16,185,129,0.15); }
+    .clay-badge-warning { background: rgba(245,158,11,0.12); color: var(--clay-warning); border-color: rgba(245,158,11,0.15); }
+    .clay-orb { display: inline-flex; align-items: center; justify-content: center; border-radius: 9999px; width: 80px; height: 80px; background: linear-gradient(135deg, #A78BFA, #7C3AED); color: #fff; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.75rem; box-shadow: var(--shadow-clay-button); transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+    .clay-orb:hover { transform: scale(1.10); box-shadow: var(--shadow-clay-button-hover); }
+    .mobile-nav-open { overflow: hidden; }
+    .auth-overlay { background: rgba(51,47,58,0.50); backdrop-filter: blur(4px); }
+    .user-avatar {
+      width: 40px; height: 40px; border-radius: 9999px;
+      background: linear-gradient(135deg, #A78BFA, #7C3AED);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 0.875rem;
+      box-shadow: var(--shadow-clay-button);
+      cursor: pointer; transition: all 0.25s ease;
+    }
+    .user-avatar:hover { transform: scale(1.05); box-shadow: var(--shadow-clay-button-hover); }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-weight: 700; font-size: 0.875rem; color: var(--clay-foreground); margin-bottom: 0.25rem; }
+    .form-group textarea { width: 100%; border: none; border-radius: var(--clay-radius-input); background: #EFEBF5; padding: 16px 24px; font-size: 1rem; color: var(--clay-foreground); box-shadow: var(--shadow-clay-pressed); transition: all 0.25s ease; font-family: 'DM Sans', sans-serif; outline: none; resize: vertical; min-height: 100px; }
+    .form-group textarea:focus { background: #fff; box-shadow: var(--shadow-clay-pressed), 0 0 0 4px rgba(124,58,237,0.15); }
+    .form-group select { width: 100%; height: 64px; border: none; border-radius: var(--clay-radius-input); background: #EFEBF5; padding: 0 24px; font-size: 1rem; color: var(--clay-foreground); box-shadow: var(--shadow-clay-pressed); transition: all 0.25s ease; font-family: 'DM Sans', sans-serif; outline: none; appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23635F69%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E"); background-position: right 16px center; background-repeat: no-repeat; background-size: 20px; }
+    .form-group select:focus { background: #fff; box-shadow: var(--shadow-clay-pressed), 0 0 0 4px rgba(124,58,237,0.15); }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 100;
+      padding: 16px 24px; border-radius: 20px; background: #fff;
+      box-shadow: var(--shadow-clay-card); backdrop-filter: blur(16px);
+      font-weight: 600; font-size: 0.875rem; max-width: 380px;
+      transform: translateY(100px); opacity: 0;
+      transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { border-left: 4px solid var(--clay-success); }
+    .toast-error { border-left: 4px solid #EF4444; }
+    .toast-info { border-left: 4px solid var(--clay-accent-tertiary); }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useMemo, createContext, useContext } = React;
+
+const protectNativeTextEntry = () => {
+  const selector = 'input, textarea, select';
+  const isTargetInput = (node) => !!node && node.matches && node.matches(selector) && !node.disabled && !node.closest('[hidden]');
+
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    const input = target && target.closest ? target.closest(selector) : null;
+    if (!isTargetInput(input)) return;
+    const active = document.activeElement;
+    if (active !== input) {
+      requestAnimationFrame(() => {
+        if (document.activeElement !== input && !input.matches(':disabled')) {
+          input.focus({ preventScroll: true });
+        }
+      });
+    }
+  });
+
+  document.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (!isTargetInput(target)) return;
+    target.setAttribute('data-native-input', 'true');
+  });
+};
+protectNativeTextEntry();
+
+// ─── DATA ────────────────────────────────────────────────
+const PROPERTIES = [
+  { id:1, title:"Sunset Valley Estate", location:"Beverly Hills, CA", price:850000, size:"2.8 acres", type:"Residential", description:"Breathtaking panoramic views...", image:"https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=400&fit=crop", seller:"Sarah Mitchell", rating:4.9, reviews:34, features:["Waterfront","Mountain View","Gated Community","Approved Plans"], isFeatured:true, listedAt:"2026-01-15", sellerId:"agent_sarah", contact:{ phone:'+1 (310) 555-0148', email:'sarah@clayestates.com', website:'https://clayestates.com/sunset-valley-estate' } },
+  { id:2, title:"Golden Prairie Acres", location:"Austin, TX", price:420000, size:"12.5 acres", type:"Agricultural", description:"Prime agricultural land...", image:"https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=400&fit=crop&crop=center", seller:"James Carter", rating:4.7, reviews:18, features:["Irrigation","Farmhouse","Fertile Soil","Fenced"], isFeatured:false, listedAt:"2026-02-01", sellerId:"agent_james", contact:{ phone:'+1 (512) 555-0138', email:'james@clayestates.com', website:'https://clayestates.com/golden-prairie-acres' } },
+  { id:3, title:"Harbor View Commercial Lot", location:"Miami, FL", price:1250000, size:"1.2 acres", type:"Commercial", description:"Waterfront commercial lot...", image:"https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=600&h=400&fit=crop", seller:"Michael Rivera", rating:4.8, reviews:22, features:["Waterfront","Dock Frontage","Mixed-Use Zoning","High Traffic"], isFeatured:true, listedAt:"2026-01-28", sellerId:"agent_michael", contact:{ phone:'+1 (305) 555-0174', email:'michael@clayestates.com', website:'https://clayestates.com/harbor-view-commercial-lot' } },
+  { id:4, title:"Pine Ridge Forest Retreat", location:"Asheville, NC", price:310000, size:"5.0 acres", type:"Residential", description:"Secluded forested land...", image:"https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=400&fit=crop", seller:"Emily Foster", rating:4.9, reviews:41, features:["Creek Frontage","Forest Views","Secluded","Cabin Ready"], isFeatured:false, listedAt:"2026-02-10", sellerId:"agent_emily", contact:{ phone:'+1 (828) 555-0192', email:'emily@clayestates.com', website:'https://clayestates.com/pine-ridge-forest-retreat' } },
+  { id:5, title:"Industrial Zone Logistics Hub", location:"Dallas, TX", price:2100000, size:"18.0 acres", type:"Industrial", description:"Heavy industrial land...", image:"https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=600&h=400&fit=crop", seller:"Robert Chen", rating:4.5, reviews:12, features:["Rail Access","Highway Frontage","3-Phase Power","Zoned Heavy"], isFeatured:false, listedAt:"2026-02-05", sellerId:"agent_robert", contact:{ phone:'+1 (214) 555-0116', email:'robert@clayestates.com', website:'https://clayestates.com/industrial-zone-logistics-hub' } },
+  { id:6, title:"Serenity Lakeside Estate", location:"Lake Tahoe, NV", price:975000, size:"3.2 acres", type:"Residential", description:"Lakeside paradise...", image:"https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop", seller:"David & Lisa Park", rating:4.9, reviews:56, features:["Lakefront","Private Dock","Panoramic Views","Approved Plans"], isFeatured:true, listedAt:"2026-01-05", sellerId:"agent_david", contact:{ phone:'+1 (775) 555-0129', email:'david@clayestates.com', website:'https://clayestates.com/serenity-lakeside-estate' } }
+];
+
+const TESTIMONIALS = [
+  { id: 1, name: 'Sarah Johnson', role: 'Real Estate Investor', avatar: 'https://ui-avatars.com/api/?name=Sarah+Johnson&background=7C3AED&color=fff&bold=true&size=80', text: 'ClayEstates made finding my dream property incredibly easy. The platform is intuitive and the support team is fantastic!' },
+  { id: 2, name: 'Michael Chen', role: 'Land Developer', avatar: 'https://ui-avatars.com/api/?name=Michael+Chen&background=DB2777&color=fff&bold=true&size=80', text: 'As a developer, I appreciate the detailed property information and seamless transaction process. Highly recommended!' },
+  { id: 3, name: 'Emily Rodriguez', role: 'Farmer', avatar: 'https://ui-avatars.com/api/?name=Emily+Rodriguez&background=0EA5E9&color=fff&bold=true&size=80', text: 'Found the perfect agricultural land for my expansion. The mortgage calculator was super helpful!' }
+];
+const RECENT_ACTIVITY = [
+  { id: 1, type: 'sold', title: 'Sunset Valley Estate', price: 850000, time: '2 hours ago' },
+  { id: 2, type: 'listed', title: 'Golden Prairie Acres', price: 420000, time: '4 hours ago' },
+  { id: 3, type: 'sold', title: 'Harbor View Commercial Lot', price: 1250000, time: '6 hours ago' },
+  { id: 4, type: 'listed', title: 'Pine Ridge Forest Retreat', price: 310000, time: '8 hours ago' }
+];
+const STATS = [
+  { icon: '🏡', value: '12,000+', label: 'Properties' },
+  { icon: '👥', value: '50,000+', label: 'Active Users' },
+  { icon: '💼', value: '8,500+', label: 'Sellers' },
+  { icon: '🎯', value: '$45B+', label: 'Land Value' }
+];
+
+// ─── ICONS ──────────────────────────────────────────────────
+const Icons = {
+  Search: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
+  Filter: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+  Plus: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  ChevronRight: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>,
+  ChevronLeft: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>,
+  Heart: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+  HeartFilled: ({ className }) => <svg className={className} fill="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+  Star: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="12 2 15.09 10.26 24 10.27 17.18 16.70 20.09 25 12 19.54 3.91 25 6.82 16.70 0 10.27 8.91 10.26 12 2"/></svg>,
+  User: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  LogOut: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>,
+  Calculator: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>,
+  Phone: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+  Mail: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>,
+  Map: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="12 2 19.8 6.4 19.8 17.6 12 22 4.2 17.6 4.2 6.4 12 2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="4.2" y1="6.4" x2="19.8" y2="6.4"/></svg>,
+  TrendingUp: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 17"/><polyline points="23 6 23 12 17 12"/></svg>,
+  X: ({ className }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+};
+
+// ─── HELPERS ──────────────────────────────────────────────
+const formatPrice = (num) => {
+  if (num >= 1000000) return `$${(num/1000000).toFixed(1)}M`;
+  if (num >= 1000) return `$${(num/1000).toFixed(0)}K`;
+  return `$${num}`;
+};
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+const getTypeColor = (type) => {
+  const map = { Residential:'bg-[#7C3AED]/10 text-[#7C3AED]', Commercial:'bg-[#0EA5E9]/10 text-[#0EA5E9]', Agricultural:'bg-[#10B981]/10 text-[#10B981]', Industrial:'bg-[#F59E0B]/10 text-[#F59E0B]', Plot:'bg-[#EC4899]/10 text-[#EC4899]' };
+  return map[type] || 'bg-gray-100 text-gray-600';
+};
+const getTypeEmoji = (type) => {
+  const map = { Residential:'🏡', Commercial:'🏢', Agricultural:'🌾', Industrial:'🏭', Plot:'📐' };
+  return map[type] || '📍';
+};
+const getInitials = (name) => name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const DEMO_ACCOUNT = {
+  name: 'Demo User',
+  email: 'demo@clayestates.com',
+  password: 'Demo12345',
+};
+const DEFAULT_PROPERTY_IMAGE = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=400&fit=crop';
+const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+const normalizeListingForDisplay = (listing) => {
+  if (!listing || typeof listing !== 'object') return null;
+  const title = sanitizeText(listing.title);
+  const location = sanitizeText(listing.location);
+  const description = sanitizeText(listing.description);
+  const size = sanitizeText(listing.size);
+  const price = Number(listing.price) || 0;
+  const features = Array.isArray(listing.features)
+    ? listing.features.map(item => sanitizeText(item)).filter(Boolean)
+    : [];
+
+  return {
+    ...listing,
+    title,
+    location,
+    description,
+    size,
+    price,
+    features,
+    contact: {
+      phone: sanitizeText(listing.contact?.phone),
+      email: sanitizeText(listing.contact?.email),
+      website: sanitizeText(listing.contact?.website),
+    },
+    plotDetails: listing.plotDetails ? {
+      zoning: sanitizeText(listing.plotDetails.zoning),
+      titleStatus: sanitizeText(listing.plotDetails.titleStatus),
+      access: sanitizeText(listing.plotDetails.access),
+      utilities: sanitizeText(listing.plotDetails.utilities),
+      soil: sanitizeText(listing.plotDetails.soil),
+    } : null,
+  };
+};
+const hasDisplayableListingData = (listing) => {
+  if (!listing || typeof listing !== 'object') return false;
+  return !!(
+    sanitizeText(listing.title) ||
+    sanitizeText(listing.location) ||
+    sanitizeText(listing.description) ||
+    sanitizeText(listing.size) ||
+    Number(listing.price) > 0 ||
+    (Array.isArray(listing.features) && listing.features.some(item => sanitizeText(item)))
+  );
+};
+
+const readFilesAsDataUrls = (files) => Promise.all(Array.from(files || []).filter(file => file && file.type && file.type.startsWith('image/')).map(file => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(new Error('Failed to read image file'));
+  reader.readAsDataURL(file);
+})));
+
+// ─── AUTH CONTEXT ──────────────────────────────────────────
+const AuthContext = createContext(null);
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('clay_user');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+        setIsAuthenticated(true);
+      } catch { localStorage.removeItem('clay_user'); }
+    }
+    setIsLoading(false);
+  }, []);
+
+  const login = (email, password) => {
+    const normalizedEmail = (email || '').trim();
+    const normalizedPassword = (password || '').trim();
+
+    if (normalizedEmail.toLowerCase() === DEMO_ACCOUNT.email.toLowerCase() && normalizedPassword === DEMO_ACCOUNT.password) {
+      const userData = {
+        id: 'demo_user',
+        email: DEMO_ACCOUNT.email,
+        name: DEMO_ACCOUNT.name,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(DEMO_ACCOUNT.name)}&background=7C3AED&color=fff&bold=true&size=80`,
+        joinedAt: new Date().toISOString(),
+      };
+      localStorage.setItem('clay_user', JSON.stringify(userData));
+      setUser(userData);
+      setIsAuthenticated(true);
+      return { success: true, user: userData };
+    }
+
+    if (!normalizedEmail || !normalizedPassword) {
+      return { success: false, error: 'Email and password are required.' };
+    }
+    if (!isValidEmail(normalizedEmail)) {
+      return { success: false, error: 'Please enter a valid email address.' };
+    }
+    if (normalizedPassword.length < 8) {
+      return { success: false, error: 'Password must be at least 8 characters.' };
+    }
+    const userData = {
+      id: 'user_' + Date.now(),
+      email: normalizedEmail,
+      name: normalizedEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(normalizedEmail.split('@')[0])}&background=7C3AED&color=fff&bold=true&size=80`,
+      joinedAt: new Date().toISOString(),
+    };
+    localStorage.setItem('clay_user', JSON.stringify(userData));
+    setUser(userData);
+    setIsAuthenticated(true);
+    return { success: true, user: userData };
+  };
+
+  const signup = (name, email, password) => {
+    if (!name || !email || !password) {
+      return { success: false, error: 'Please fill all fields.' };
+    }
+    if (name.trim().length < 2) {
+      return { success: false, error: 'Name must be at least 2 characters.' };
+    }
+    if (!isValidEmail(email)) {
+      return { success: false, error: 'Please enter a valid email address.' };
+    }
+    if (password.length < 8) {
+      return { success: false, error: 'Password must be at least 8 characters.' };
+    }
+    const userData = {
+      id: 'user_' + Date.now(),
+      name: name.trim(),
+      email,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=7C3AED&color=fff&bold=true&size=80`,
+      joinedAt: new Date().toISOString(),
+    };
+    localStorage.setItem('clay_user', JSON.stringify(userData));
+    setUser(userData);
+    setIsAuthenticated(true);
+    return { success: true, user: userData };
+  };
+
+  const logout = () => {
+    localStorage.removeItem('clay_user');
+    setUser(null);
+    setIsAuthenticated(false);
+    // Favorites will be cleared by the App component's effect
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, signup, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+const useAuth = () => useContext(AuthContext);
+
+// ─── MAIN APP ──────────────────────────────────────────────
+function App() {
+  const { user, isAuthenticated, isLoading, login, signup, logout } = useAuth();
+  const [currentPage, setCurrentPage] = useState('home');
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [favorites, setFavorites] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [filterPrice, setFilterPrice] = useState('all');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [showMortgage, setShowMortgage] = useState(false);
+  const [mortgageData, setMortgageData] = useState({ price: 500000, down: 20, rate: 6.5, term: 30 });
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('signin');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [toast, setToast] = useState(null);
+  const [showListForm, setShowListForm] = useState(false);
+  const [editingListingId, setEditingListingId] = useState(null);
+  const [screenSize, setScreenSize] = useState('Desktop');
+  const [userListings, setUserListings] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('clay_user_listings')) || [];
+      return Array.isArray(stored)
+        ? stored.map(normalizeListingForDisplay).filter(Boolean).filter(hasDisplayableListingData)
+        : [];
+    } catch { return []; }
+  });
+  const [listingForm, setListingForm] = useState({
+    title: '', location: '', price: '', size: '', type: 'Residential',
+    description: '', image: DEFAULT_PROPERTY_IMAGE,
+    features: '',
+    contact: { phone: '', email: '', website: '' },
+    plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' }
+  });
+
+  // ─── SCREEN SIZE DETECTION ────────────────────────────
+  useEffect(() => {
+    const detectScreenSize = () => {
+      const width = window.innerWidth;
+      if (width < 640) setScreenSize('📱 Mobile');
+      else if (width < 1024) setScreenSize('📱 Tablet');
+      else setScreenSize('🖥️ Desktop');
+    };
+    
+    detectScreenSize();
+    window.addEventListener('resize', detectScreenSize);
+    return () => window.removeEventListener('resize', detectScreenSize);
+  }, []);
+
+  // ─── TOAST ──────────────────────────────────────────────
+  const showToast = useCallback((message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
+
+  // ─── FAVORITES (per user) ──────────────────────────────
+  const getFavoritesKey = useCallback(() => {
+    if (isAuthenticated && user) return `clay_favorites_${user.id}`;
+    return null;
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    const key = getFavoritesKey();
+    if (key) {
+      try {
+        const stored = JSON.parse(localStorage.getItem(key));
+        setFavorites(stored && Array.isArray(stored) ? stored : []);
+      } catch { setFavorites([]); }
+    } else {
+      setFavorites([]);
+    }
+  }, [getFavoritesKey]);
+
+  useEffect(() => {
+    const key = getFavoritesKey();
+    if (key) localStorage.setItem(key, JSON.stringify(favorites));
+  }, [favorites, getFavoritesKey]);
+
+  // ─── USER LISTINGS ──────────────────────────────────────
+  useEffect(() => {
+    const cleanedListings = userListings
+      .map(normalizeListingForDisplay)
+      .filter(Boolean)
+      .filter(hasDisplayableListingData);
+
+    if (cleanedListings.length !== userListings.length) {
+      setUserListings(cleanedListings);
+      return;
+    }
+
+    localStorage.setItem('clay_user_listings', JSON.stringify(cleanedListings));
+  }, [userListings]);
+
+  // ─── SCROLL REVEAL ─────────────────────────────────────
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('reveal-visible');
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+    const timer = setTimeout(() => {
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    }, 100);
+    return () => { clearTimeout(timer); observer.disconnect(); };
+  }, [currentPage]);
+
+  // ─── TOGGLE FAVORITE ──────────────────────────────────
+  const toggleFavorite = useCallback((id) => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      setAuthMode('signin');
+      return;
+    }
+    setFavorites(prev => {
+      const newFavs = prev.includes(id) ? prev.filter(fid => fid !== id) : [...prev, id];
+      return newFavs;
+    });
+  }, [isAuthenticated]);
+
+  // ─── AUTH HANDLERS ─────────────────────────────────────
+  const handleAuthSubmit = (e) => {
+    e.preventDefault();
+    setAuthError('');
+    if (authMode === 'signin') {
+      const result = login(authEmail, authPassword);
+      if (result.success) {
+        setShowAuthModal(false);
+        setAuthEmail(''); setAuthPassword('');
+        showToast(`Welcome back, ${result.user.name}!`, 'success');
+      } else {
+        setAuthError(result.error);
+      }
+    } else {
+      const result = signup(authName, authEmail, authPassword);
+      if (result.success) {
+        setShowAuthModal(false);
+        setAuthEmail(''); setAuthPassword(''); setAuthName('');
+        showToast(`Welcome to ClayEstates, ${result.user.name}!`, 'success');
+      } else {
+        setAuthError(result.error);
+      }
+    }
+  };
+
+  // ─── LISTING SUBMIT ────────────────────────────────────
+  const handleListingSubmit = (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      setAuthMode('signin');
+      return;
+    }
+
+    const normalizedImages = [listingForm.image || DEFAULT_PROPERTY_IMAGE];
+
+    const title = sanitizeText(listingForm.title);
+    const location = sanitizeText(listingForm.location);
+    const description = sanitizeText(listingForm.description);
+    const size = sanitizeText(listingForm.size);
+    const price = parseFloat(listingForm.price) || 0;
+    const hasAnyListingData = title || location || description || size || price > 0 || sanitizeText(listingForm.features);
+
+    if (!hasAnyListingData) {
+      showToast('Add at least one property detail before listing.', 'info');
+      return;
+    }
+
+    const baseListing = {
+      title: title || `${listingForm.type || 'Property'} Listing`,
+      location,
+      price,
+      size,
+      type: listingForm.type,
+      description,
+      image: normalizedImages[0],
+      images: normalizedImages,
+      features: String(listingForm.features || '').split(',').map(f => sanitizeText(f)).filter(Boolean),
+      contact: {
+        phone: sanitizeText(listingForm.contact?.phone),
+        email: sanitizeText(listingForm.contact?.email),
+        website: sanitizeText(listingForm.contact?.website),
+      },
+      plotDetails: listingForm.type === 'Plot' ? {
+        zoning: sanitizeText(listingForm.plotDetails?.zoning),
+        titleStatus: sanitizeText(listingForm.plotDetails?.titleStatus),
+        access: sanitizeText(listingForm.plotDetails?.access),
+        utilities: sanitizeText(listingForm.plotDetails?.utilities),
+        soil: sanitizeText(listingForm.plotDetails?.soil),
+      } : null,
+    };
+
+    if (editingListingId) {
+      setUserListings(prev => prev.map(item => item.id === editingListingId ? {
+        ...item,
+        ...baseListing,
+        listedAt: new Date().toISOString(),
+      } : item));
+      setEditingListingId(null);
+      setShowListForm(false);
+      setListingForm({
+        title: '', location: '', price: '', size: '', type: 'Residential',
+        description: '', image: DEFAULT_PROPERTY_IMAGE,
+        features: '',
+        contact: { phone: '', email: '', website: '' },
+        plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' }
+      });
+      showToast('Property updated successfully! ✨', 'success');
+      return;
+    }
+
+    const newListing = {
+      id: Date.now(),
+      ...baseListing,
+      seller: user.name,
+      rating: 0,
+      reviews: 0,
+      isFeatured: false,
+      listedAt: new Date().toISOString(),
+      sellerId: user.id,
+      isUserListing: true,
+    };
+    setUserListings(prev => [newListing, ...prev]);
+    setShowListForm(false);
+    setListingForm({
+      title: '', location: '', price: '', size: '', type: 'Residential',
+      description: '', image: DEFAULT_PROPERTY_IMAGE,
+      features: '',
+      contact: { phone: '', email: '', website: '' },
+      plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' }
+    });
+    showToast('Property listed successfully! 🎉', 'success');
+  };
+
+  // ─── DELETE USER LISTING ──────────────────────────────
+  const deleteUserListing = useCallback((id) => {
+    setUserListings(prev => prev.filter(p => p.id !== id));
+    showToast('Listing removed successfully.', 'info');
+  }, [showToast]);
+
+  // ─── ALL PROPERTIES ────────────────────────────────────
+  const allProperties = useMemo(() => [...PROPERTIES, ...userListings.filter(hasDisplayableListingData)], [userListings]);
+
+  // ─── FILTERED PROPERTIES ──────────────────────────────
+  const filteredProperties = useMemo(() => {
+    let list = [...allProperties];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(p =>
+        p.title.toLowerCase().includes(q) ||
+        p.location.toLowerCase().includes(q) ||
+        p.type.toLowerCase().includes(q)
+      );
+    }
+    if (filterType !== 'all') list = list.filter(p => p.type === filterType);
+    if (filterPrice !== 'all') {
+      if (filterPrice === 'under250k') list = list.filter(p => p.price < 250000);
+      else if (filterPrice === '250k-500k') list = list.filter(p => p.price >= 250000 && p.price < 500000);
+      else if (filterPrice === '500k-1m') list = list.filter(p => p.price >= 500000 && p.price < 1000000);
+      else if (filterPrice === 'over1m') list = list.filter(p => p.price >= 1000000);
+    }
+    return list;
+  }, [allProperties, searchQuery, filterType, filterPrice]);
+
+  const featuredProperties = useMemo(() => allProperties.filter(p => p.isFeatured), [allProperties]);
+
+  // ─── MORTGAGE ──────────────────────────────────────────
+  const calcMortgage = useCallback(() => {
+    const { price, down, rate, term } = mortgageData;
+    const principal = price * (1 - down / 100);
+    const monthlyRate = rate / 100 / 12;
+    const n = term * 12;
+    if (monthlyRate === 0) return principal / n;
+    return principal * monthlyRate * Math.pow(1 + monthlyRate, n) / (Math.pow(1 + monthlyRate, n) - 1);
+  }, [mortgageData]);
+  const monthlyPayment = useMemo(() => calcMortgage(), [calcMortgage]);
+
+  // ─── COMPONENTS ──────────────────────────────────────────
+  const Blobs = () => (
+    <div className="clay-blob-container">
+      <div className="clay-blob -top-[10%] -left-[10%] bg-[#8B5CF6] animate-clay-float" />
+      <div className="clay-blob -right-[10%] top-[20%] bg-[#EC4899] animate-clay-float-delayed animation-delay-2000" />
+      <div className="clay-blob bottom-[10%] -left-[5%] bg-[#0EA5E9] animate-clay-float-slow animation-delay-4000" />
+      <div className="clay-blob bottom-[20%] -right-[5%] bg-[#F59E0B] animate-clay-float animation-delay-2000" />
+    </div>
+  );
+
+  const Toast = () => {
+    if (!toast) return null;
+    const typeClass = toast.type === 'success' ? 'toast-success' : toast.type === 'error' ? 'toast-error' : 'toast-info';
+    return (
+      <div className={`toast show ${typeClass}`}>
+        <div className="flex items-center gap-3">
+          <span className="text-lg">{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}</span>
+          <span>{toast.message}</span>
+        </div>
+      </div>
+    );
+  };
+
+  const AuthModal = () => {
+    if (!showAuthModal) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 auth-overlay" onClick={() => setShowAuthModal(false)}>
+        <div className="clay-card p-6 sm:p-8 max-w-md w-full rounded-[32px] sm:rounded-[40px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-nunito font-extrabold text-2xl sm:text-3xl text-clay-foreground">
+              {authMode === 'signin' ? 'Welcome Back 👋' : 'Create Account ✨'}
+            </h3>
+            <button onClick={() => setShowAuthModal(false)} className="w-10 h-10 rounded-full bg-white/60 shadow-clay-button flex items-center justify-center hover:shadow-clay-button-hover transition-all clay-squish">
+              <Icons.X className="w-5 h-5" />
+            </button>
+          </div>
+          <form onSubmit={handleAuthSubmit} className="space-y-4 w-full">
+            {authMode === 'signup' && (
+              <div className="w-full">
+                <label className="block text-sm font-bold text-clay-foreground mb-1">Full Name</label>
+                <input type="text" value={authName} onChange={(e) => setAuthName(e.target.value)} className="clay-input w-full rounded-[20px] text-base" placeholder="John Doe" required />
+              </div>
+            )}
+            <div className="w-full">
+              <label className="block text-sm font-bold text-clay-foreground mb-1">Email Address</label>
+              <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="clay-input w-full rounded-[20px] text-base" placeholder="you@example.com" required />
+            </div>
+            <div className="w-full">
+              <label className="block text-sm font-bold text-clay-foreground mb-1">Password</label>
+              <input type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="clay-input w-full rounded-[20px] text-base" placeholder="••••••••" minLength="8" required />
+              <p className="text-xs text-clay-muted mt-1">Min. 8 characters</p>
+            </div>
+            {authError && <div className="bg-red-50 text-red-600 p-3 rounded-[16px] text-sm font-medium">{authError}</div>}
+            <button type="submit" className="clay-btn clay-btn-primary w-full">{authMode === 'signin' ? 'Sign In' : 'Create Account'}</button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('signin');
+                setAuthError('');
+                setAuthEmail(DEMO_ACCOUNT.email);
+                setAuthPassword(DEMO_ACCOUNT.password);
+              }}
+              className="clay-btn clay-btn-secondary w-full border border-[#7C3AED]/15"
+            >
+              Use demo account
+            </button>
+            <div className="rounded-[18px] bg-[#F5F3FF] px-3 py-2 text-center text-xs text-[#5B3CC5] font-semibold">
+              Demo login: {DEMO_ACCOUNT.email} / {DEMO_ACCOUNT.password}
+            </div>
+            <div className="text-center text-sm text-clay-muted">
+              {authMode === 'signin' ? (
+                <span>Don't have an account? <button type="button" onClick={() => { setAuthMode('signup'); setAuthError(''); setAuthEmail(''); setAuthPassword(''); setAuthName(''); }} className="text-[#7C3AED] font-bold hover:underline">Sign Up</button></span>
+              ) : (
+                <span>Already have an account? <button type="button" onClick={() => { setAuthMode('signin'); setAuthError(''); setAuthEmail(''); setAuthPassword(''); setAuthName(''); }} className="text-[#7C3AED] font-bold hover:underline">Sign In</button></span>
+              )}
+            </div>
+            <div className="text-center text-xs text-clay-muted mt-2">By continuing, you agree to our Terms of Service and Privacy Policy.</div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const ListingFormModal = () => {
+    if (!showListForm) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 auth-overlay" onClick={() => setShowListForm(false)}>
+        <div className="clay-card p-6 sm:p-8 max-w-2xl w-full rounded-[32px] sm:rounded-[40px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-nunito font-extrabold text-2xl sm:text-3xl text-clay-foreground">📝 List Your Property</h3>
+            <button onClick={() => setShowListForm(false)} className="w-10 h-10 rounded-full bg-white/60 shadow-clay-button flex items-center justify-center hover:shadow-clay-button-hover transition-all clay-squish">
+              <Icons.X className="w-5 h-5" />
+            </button>
+          </div>
+          <form onSubmit={handleListingSubmit} className="space-y-4">
+            <div className="form-group">
+              <label>Property Title</label>
+              <input type="text" value={listingForm.title} onChange={(e) => setListingForm(prev => ({ ...prev, title: e.target.value }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="e.g. Sunset Valley Estate" />
+            </div>
+            <div className="form-group">
+              <label>Location</label>
+              <input type="text" value={listingForm.location} onChange={(e) => setListingForm(prev => ({ ...prev, location: e.target.value }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="e.g. Beverly Hills, CA" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="form-group">
+                <label>Price ($)</label>
+                <input type="number" value={listingForm.price} onChange={(e) => setListingForm(prev => ({ ...prev, price: e.target.value }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="850000" />
+              </div>
+              <div className="form-group">
+                <label>Size (acres)</label>
+                <input type="text" value={listingForm.size} onChange={(e) => setListingForm(prev => ({ ...prev, size: e.target.value }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="e.g. 2.8 acres" />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Property Type</label>
+              <select value={listingForm.type} onChange={(e) => setListingForm(prev => ({ ...prev, type: e.target.value }))}>
+                <option value="Residential">🏡 Residential</option>
+                <option value="Commercial">🏢 Commercial</option>
+                <option value="Agricultural">🌾 Agricultural</option>
+                <option value="Industrial">🏭 Industrial</option>
+                <option value="Plot">📐 Plot</option>
+              </select>
+            </div>
+            {listingForm.type === 'Plot' && (
+              <div className="rounded-[24px] bg-[#F5F3FF] p-4 sm:p-5 border border-[#7C3AED]/10">
+                <h4 className="font-nunito font-extrabold text-lg text-clay-foreground mb-3">📐 Plot Details</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="form-group mb-0">
+                    <label>Zoning</label>
+                    <input type="text" value={listingForm.plotDetails?.zoning || ''} onChange={(e) => setListingForm(prev => ({ ...prev, plotDetails: { ...prev.plotDetails, zoning: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="Residential / Commercial" />
+                  </div>
+                  <div className="form-group mb-0">
+                    <label>Title Status</label>
+                    <input type="text" value={listingForm.plotDetails?.titleStatus || ''} onChange={(e) => setListingForm(prev => ({ ...prev, plotDetails: { ...prev.plotDetails, titleStatus: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="Clear / Leasehold" />
+                  </div>
+                  <div className="form-group mb-0">
+                    <label>Access</label>
+                    <input type="text" value={listingForm.plotDetails?.access || ''} onChange={(e) => setListingForm(prev => ({ ...prev, plotDetails: { ...prev.plotDetails, access: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="Road frontage / Gated access" />
+                  </div>
+                  <div className="form-group mb-0">
+                    <label>Utilities</label>
+                    <input type="text" value={listingForm.plotDetails?.utilities || ''} onChange={(e) => setListingForm(prev => ({ ...prev, plotDetails: { ...prev.plotDetails, utilities: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="Electric, water, sewer" />
+                  </div>
+                  <div className="form-group mb-0 sm:col-span-2">
+                    <label>Soil / Land Use</label>
+                    <input type="text" value={listingForm.plotDetails?.soil || ''} onChange={(e) => setListingForm(prev => ({ ...prev, plotDetails: { ...prev.plotDetails, soil: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="Fertile soil / commercial-ready / flat terrain" />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="form-group">
+              <label>Description</label>
+              <textarea value={listingForm.description} onChange={(e) => setListingForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Describe your property in detail..." />
+            </div>
+            <div className="form-group">
+              <label>Features (comma separated)</label>
+              <input type="text" value={listingForm.features} onChange={(e) => setListingForm(prev => ({ ...prev, features: e.target.value }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="e.g. Waterfront, Mountain View, Gated Community" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="form-group mb-0">
+                <label>Call Number</label>
+                <input type="tel" value={listingForm.contact?.phone || ''} onChange={(e) => setListingForm(prev => ({ ...prev, contact: { ...prev.contact, phone: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="+1 (555) 123-4567" />
+              </div>
+              <div className="form-group mb-0">
+                <label>Email</label>
+                <input type="email" value={listingForm.contact?.email || ''} onChange={(e) => setListingForm(prev => ({ ...prev, contact: { ...prev.contact, email: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="seller@email.com" />
+              </div>
+              <div className="form-group mb-0">
+                <label>Website / Link</label>
+                <input type="url" value={listingForm.contact?.website || ''} onChange={(e) => setListingForm(prev => ({ ...prev, contact: { ...prev.contact, website: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="https://yourwebsite.com" />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => { setShowListForm(false); setEditingListingId(null); setListingForm({ title: '', location: '', price: '', size: '', type: 'Residential', description: '', image: DEFAULT_PROPERTY_IMAGE, features: '', contact: { phone: '', email: '', website: '' }, plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' } }); }} className="clay-btn clay-btn-secondary flex-1 text-sm">Cancel</button>
+              <button type="submit" className="clay-btn clay-btn-primary flex-1 text-sm">{editingListingId ? 'Update Property' : 'List Property'}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  const MortgageModal = ({ isOpen, onClose }) => {
+    if (!isOpen) return null;
+    const handleChange = (key, value) => setMortgageData(prev => ({ ...prev, [key]: parseFloat(value) || 0 }));
+    const payment = monthlyPayment;
+    const totalCost = payment * mortgageData.term * 12;
+    const totalInterest = totalCost - mortgageData.price * (1 - mortgageData.down / 100);
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 auth-overlay" onClick={onClose}>
+        <div className="clay-card p-4 sm:p-6 md:p-8 max-w-lg w-full rounded-[32px] sm:rounded-[40px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h3 className="font-nunito font-extrabold text-2xl sm:text-3xl text-clay-foreground">🧮 Mortgage Calculator</h3>
+            <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/60 shadow-clay-button flex items-center justify-center hover:shadow-clay-button-hover transition-all clay-squish"><Icons.X className="w-5 h-5" /></button>
+          </div>
+          <div className="space-y-4">
+            <div><label className="block text-sm font-bold text-clay-foreground mb-1">Property Price ($)</label><input type="number" value={mortgageData.price} onChange={(e) => handleChange('price', e.target.value)} className="clay-input h-14 rounded-[20px] text-base" min="0" /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><label className="block text-sm font-bold text-clay-foreground mb-1">Down Payment (%)</label><input type="number" value={mortgageData.down} onChange={(e) => handleChange('down', e.target.value)} className="clay-input h-14 rounded-[20px] text-base" min="0" max="100" /></div>
+              <div><label className="block text-sm font-bold text-clay-foreground mb-1">Interest Rate (%)</label><input type="number" value={mortgageData.rate} onChange={(e) => handleChange('rate', e.target.value)} className="clay-input h-14 rounded-[20px] text-base" min="0" step="0.1" /></div>
+            </div>
+            <div><label className="block text-sm font-bold text-clay-foreground mb-1">Term (years)</label><input type="number" value={mortgageData.term} onChange={(e) => handleChange('term', e.target.value)} className="clay-input h-14 rounded-[20px] text-base" min="1" max="40" /></div>
+            <div className="bg-white/40 p-4 sm:p-6 rounded-[24px] shadow-clay-pressed mt-4">
+              <div className="flex items-center justify-between"><span className="text-clay-muted font-medium">Monthly Payment</span><span className="font-nunito font-black text-2xl sm:text-3xl text-[#7C3AED]">${payment.toFixed(0)}</span></div>
+              <div className="flex items-center justify-between mt-2 text-sm"><span className="text-clay-muted">Total Interest</span><span className="font-bold text-clay-foreground">${totalInterest.toFixed(0)}</span></div>
+              <div className="flex items-center justify-between mt-1 text-sm"><span className="text-clay-muted">Total Cost</span><span className="font-bold text-clay-foreground">${totalCost.toFixed(0)}</span></div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={onClose} className="clay-btn clay-btn-secondary flex-1 text-sm">Close</button>
+              {isAuthenticated ? <button className="clay-btn clay-btn-primary flex-1 text-sm">Get Pre-Approved</button> :
+                <button onClick={() => { onClose(); setShowAuthModal(true); setAuthMode('signin'); }} className="clay-btn clay-btn-primary flex-1 text-sm">Sign In to Apply</button>}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── NAV ──────────────────────────────────────────────────
+  const Nav = () => (
+    <nav className="relative z-20 w-full px-4 sm:px-6 pt-4 sm:pt-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="clay-card px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between rounded-[32px] sm:rounded-[40px] shadow-clay-card">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setCurrentPage('home')}>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#A78BFA] to-[#7C3AED] flex items-center justify-center shadow-clay-button text-white font-nunito font-black text-lg sm:text-xl">CE</div>
+            <span className="font-nunito font-extrabold text-xl sm:text-2xl text-clay-foreground hidden xs:block">Clay<span className="text-[#7C3AED]">Estates</span></span>
+          </div>
+          <div className="hidden md:flex items-center gap-2 lg:gap-4">
+            <button onClick={() => setCurrentPage('home')} className={`px-4 py-2 rounded-2xl font-bold text-sm transition-all ${currentPage === 'home' ? 'bg-[#7C3AED]/10 text-[#7C3AED]' : 'text-clay-muted hover:text-clay-foreground hover:bg-white/40'}`}>Home</button>
+            <button onClick={() => setCurrentPage('listings')} className={`px-4 py-2 rounded-2xl font-bold text-sm transition-all ${currentPage === 'listings' ? 'bg-[#7C3AED]/10 text-[#7C3AED]' : 'text-clay-muted hover:text-clay-foreground hover:bg-white/40'}`}>Listings</button>
+            {isAuthenticated && <button onClick={() => setCurrentPage('dashboard')} className={`px-4 py-2 rounded-2xl font-bold text-sm transition-all ${currentPage === 'dashboard' ? 'bg-[#7C3AED]/10 text-[#7C3AED]' : 'text-clay-muted hover:text-clay-foreground hover:bg-white/40'}`}>Dashboard</button>}
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {isAuthenticated ? (
+              <>
+                <button onClick={() => setShowListForm(true)} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#7C3AED]/10 text-[#7C3AED] font-bold text-sm hover:bg-[#7C3AED]/20 transition-all clay-squish"><Icons.Plus className="w-4 h-4" /><span>List</span></button>
+                <button onClick={() => setCurrentPage('dashboard')} className="user-avatar" title={user?.name}>{getInitials(user?.name || 'User')}</button>
+                <button onClick={() => { logout(); setCurrentPage('home'); }} className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-2xl text-clay-muted hover:text-clay-foreground transition-all text-sm font-medium"><Icons.LogOut className="w-4 h-4" /></button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => { setShowAuthModal(true); setAuthMode('signin'); }} className="hidden sm:flex items-center gap-2 px-5 py-2 rounded-2xl bg-[#7C3AED] text-white font-bold text-sm shadow-clay-button hover:shadow-clay-button-hover hover:-translate-y-0.5 transition-all clay-squish"><Icons.User className="w-4 h-4" /><span>Sign In</span></button>
+                <button onClick={() => { setShowAuthModal(true); setAuthMode('signup'); }} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/60 text-clay-foreground font-bold text-sm shadow-clay-button hover:shadow-clay-button-hover hover:-translate-y-0.5 transition-all clay-squish">Sign Up</button>
+              </>
+            )}
+            <button onClick={() => setShowMortgage(!showMortgage)} className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/60 text-clay-foreground font-bold text-sm shadow-clay-button hover:shadow-clay-button-hover transition-all clay-squish"><Icons.Calculator className="w-4 h-4" /></button>
+            <button onClick={() => { setCurrentPage('listings'); setIsFilterOpen(!isFilterOpen); }} className="flex md:hidden items-center gap-2 px-3 py-2 rounded-2xl bg-white/60 text-clay-foreground font-bold text-sm shadow-clay-button hover:shadow-clay-button-hover transition-all clay-squish"><Icons.Filter className="w-4 h-4" /></button>
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden flex items-center justify-center w-10 h-10 rounded-2xl bg-white/60 shadow-clay-button hover:shadow-clay-button-hover transition-all clay-squish"><span className="text-xl font-bold text-clay-foreground">{isMobileMenuOpen ? '✕' : '☰'}</span></button>
+          </div>
+        </div>
+        {isMobileMenuOpen && (
+          <div className="md:hidden mt-3 clay-card p-4 flex flex-col gap-2 rounded-[24px] shadow-clay-card">
+            <button onClick={() => { setCurrentPage('home'); setIsMobileMenuOpen(false); }} className={`px-4 py-3 rounded-2xl font-bold text-left text-sm transition-all ${currentPage === 'home' ? 'bg-[#7C3AED]/10 text-[#7C3AED]' : 'text-clay-muted hover:text-clay-foreground'}`}>Home</button>
+            <button onClick={() => { setCurrentPage('listings'); setIsMobileMenuOpen(false); }} className={`px-4 py-3 rounded-2xl font-bold text-left text-sm transition-all ${currentPage === 'listings' ? 'bg-[#7C3AED]/10 text-[#7C3AED]' : 'text-clay-muted hover:text-clay-foreground'}`}>Listings</button>
+            {isAuthenticated ? (
+              <>
+                <button onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); }} className={`px-4 py-3 rounded-2xl font-bold text-left text-sm transition-all ${currentPage === 'dashboard' ? 'bg-[#7C3AED]/10 text-[#7C3AED]' : 'text-clay-muted hover:text-clay-foreground'}`}>Dashboard</button>
+                <button onClick={() => { setShowListForm(true); setIsMobileMenuOpen(false); }} className="px-4 py-3 rounded-2xl font-bold text-left text-sm text-[#7C3AED] hover:bg-[#7C3AED]/10 transition-all flex items-center gap-3"><Icons.Plus className="w-4 h-4" /> List Property</button>
+                <button onClick={() => { logout(); setCurrentPage('home'); setIsMobileMenuOpen(false); }} className="px-4 py-3 rounded-2xl font-bold text-left text-sm text-red-500 hover:bg-red-50 transition-all flex items-center gap-3"><Icons.LogOut className="w-4 h-4" /> Sign Out</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => { setShowAuthModal(true); setAuthMode('signin'); setIsMobileMenuOpen(false); }} className="px-4 py-3 rounded-2xl font-bold text-left text-sm text-[#7C3AED] hover:bg-[#7C3AED]/10 transition-all">Sign In</button>
+                <button onClick={() => { setShowAuthModal(true); setAuthMode('signup'); setIsMobileMenuOpen(false); }} className="px-4 py-3 rounded-2xl font-bold text-left text-sm text-clay-foreground hover:bg-white/40 transition-all">Sign Up</button>
+              </>
+            )}
+            <button onClick={() => { setShowMortgage(!showMortgage); setIsMobileMenuOpen(false); }} className="px-4 py-3 rounded-2xl font-bold text-left text-sm text-clay-muted hover:text-clay-foreground flex items-center gap-3"><Icons.Calculator className="w-4 h-4" /> Mortgage Calculator</button>
+          </div>
+        )}
+      </div>
+    </nav>
+  );
+
+  // ─── PROPERTY CARD ──────────────────────────────────────
+  const PropertyCard = ({ property, featured = false, delay = 1 }) => {
+    const isFav = favorites.includes(property.id);
+    const isUserListing = property.isUserListing;
+    const hasLocation = !!property.location && property.location.trim() && property.location.trim() !== 'Location not provided';
+    const hasSize = !!property.size && property.size.trim() && property.size.trim() !== 'N/A';
+    const hasPrice = Number(property.price) > 0;
+    const galleryImages = useMemo(() => {
+      if (Array.isArray(property.images) && property.images.length > 0) return property.images;
+      if (property.image) return [property.image];
+      return [DEFAULT_PROPERTY_IMAGE];
+    }, [property.images, property.image]);
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+    useEffect(() => {
+      if (galleryImages.length <= 1) return undefined;
+      const interval = setInterval(() => {
+        setActiveImageIndex(prev => (prev + 1) % galleryImages.length);
+      }, 10000);
+      return () => clearInterval(interval);
+    }, [galleryImages]);
+
+    useEffect(() => {
+      setActiveImageIndex(0);
+    }, [property.id, property.image, property.images]);
+
+    return (
+      <div className={`clay-card group cursor-pointer rounded-[28px] sm:rounded-[32px] overflow-hidden flex flex-col h-full transition-all duration-500 hover:shadow-clay-card-hover hover:-translate-y-2 ${featured ? 'md:col-span-2 md:row-span-2' : ''} reveal reveal-delay-${Math.min(delay, 10)}`} onClick={() => { setSelectedProperty(property); setCurrentPage('detail'); }}>
+        <div className="relative aspect-[16/10] overflow-hidden">
+          <img src={galleryImages[activeImageIndex] || galleryImages[0]} alt={property.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" />
+          {galleryImages.length > 1 && (
+            <div className="absolute bottom-3 left-3 right-3 flex justify-center gap-1.5">
+              {galleryImages.map((_, idx) => (
+                <span key={`${property.id}-dot-${idx}`} className={`h-1.5 rounded-full transition-all ${idx === activeImageIndex ? 'w-7 bg-white' : 'w-2 bg-white/60'}`} />
+              ))}
+            </div>
+          )}
+          <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
+            <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${getTypeColor(property.type)} backdrop-blur-sm shadow-sm`}>{getTypeEmoji(property.type)} {property.type}</span>
+            {property.isFeatured && <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#F59E0B]/15 text-[#F59E0B] backdrop-blur-sm border border-[#F59E0B]/20">⭐ Featured</span>}
+            {isUserListing && <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#7C3AED]/15 text-[#7C3AED] backdrop-blur-sm border border-[#7C3AED]/20">Your Listing</span>}
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); toggleFavorite(property.id); }} className="absolute top-3 right-3 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md shadow-clay-button flex items-center justify-center transition-all hover:scale-110 clay-squish">
+            {isFav ? <Icons.HeartFilled className="w-5 h-5 text-[#DB2777]" /> : <Icons.Heart className="w-5 h-5 text-clay-muted" />}
+          </button>
+          <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end gap-2">
+            {hasSize && <div className="bg-white/85 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-clay-foreground shadow-clay-button">{property.size}</div>}
+            {hasLocation && <div className="bg-white/85 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-clay-foreground shadow-clay-button">📍 {property.location.split(',').pop().trim()}</div>}
+          </div>
+        </div>
+        <div className="p-4 sm:p-6 flex flex-col flex-1">
+          <div className="flex items-start justify-between gap-2"><h3 className="font-nunito font-extrabold text-lg sm:text-xl text-clay-foreground line-clamp-1">{property.title || `${property.type || 'Property'} Listing`}</h3></div>
+          {property.description && <p className="text-sm text-clay-muted mt-1 line-clamp-2 leading-relaxed flex-1">{property.description}</p>}
+          <div className="mt-3 flex items-center gap-3 flex-wrap">
+            {hasPrice && <span className="font-nunito font-black text-xl sm:text-2xl text-[#7C3AED]">{formatPrice(property.price)}</span>}
+            {hasSize && <span className="text-xs text-clay-muted font-medium">· {property.size}</span>}
+          </div>
+          <div className="mt-3 flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-sm">
+              <span className="font-medium text-clay-foreground">{property.seller}</span>
+              <span className="text-clay-muted">·</span>
+              <div className="flex items-center gap-0.5">
+                <Icons.Star className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
+                <span className="font-bold text-clay-foreground">{property.rating || 'New'}</span>
+                {property.reviews > 0 && <span className="text-clay-muted text-xs">({property.reviews})</span>}
+              </div>
+            </div>
+            <div className="flex gap-1 text-xs text-clay-muted"><span>🕐 {new Date(property.listedAt).toLocaleDateString()}</span></div>
+          </div>
+          {isUserListing && isAuthenticated && user?.id === property.sellerId && (
+            <div className="mt-2 flex gap-2"><button onClick={(e) => { e.stopPropagation(); deleteUserListing(property.id); }} className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors">Remove Listing</button></div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ─── HERO ──────────────────────────────────────────────────
+  const Hero = () => (
+    <section className="relative z-10 px-4 sm:px-6 pt-8 sm:pt-12 pb-12 sm:pb-20 reveal">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 clay-badge mb-4 sm:mb-6 animate-clay-breathe"><span className="text-lg">🌍</span><span>Trusted by 12,000+ land buyers &amp; sellers</span></div>
+          <h1 className="font-nunito font-black text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight leading-[1.1] text-clay-foreground">Discover Your<span className="clay-text-gradient block sm:inline"> Perfect Land</span></h1>
+          <p className="mt-4 sm:mt-6 text-clay-muted text-lg sm:text-xl md:text-2xl font-medium leading-relaxed max-w-2xl mx-auto">Buy and sell land with confidence. Premium listings, transparent pricing, and a community that trusts ClayEstates.</p>
+          <div className="mt-8 sm:mt-10 clay-card p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 rounded-[28px] sm:rounded-[32px] shadow-clay-card">
+            <div className="flex-1 relative">
+              <Icons.Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-clay-muted" />
+              <input type="text" placeholder="Search by location, type, or keyword..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="clay-input h-14 sm:h-16 pl-12 pr-4 rounded-[20px] text-base bg-[#EFEBF5] shadow-clay-pressed focus:bg-white w-full" />
+            </div>
+            <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="clay-input h-14 sm:h-16 px-4 rounded-[20px] text-sm bg-[#EFEBF5] shadow-clay-pressed focus:bg-white w-full sm:w-auto appearance-none cursor-pointer" style={{ paddingRight: '40px', backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23635F69%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E")', backgroundPosition: 'right 12px center', backgroundRepeat: 'no-repeat', backgroundSize: '20px' }}>
+                <option value="all">All Types</option><option value="Residential">🏡 Residential</option><option value="Commercial">🏢 Commercial</option><option value="Agricultural">🌾 Agricultural</option><option value="Industrial">🏭 Industrial</option><option value="Plot">📐 Plot</option>
+              </select>
+              <button onClick={() => setCurrentPage('listings')} className="clay-btn clay-btn-primary flex-1 sm:flex-none min-w-[120px]">Search</button>
+            </div>
+          </div>
+          <div className="mt-8 sm:mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            {STATS.map((s, i) => (
+              <div key={i} className={`clay-card p-4 sm:p-5 text-center rounded-[24px] hover:shadow-clay-card-hover hover:-translate-y-1 transition-all reveal reveal-delay-${i+1}`}>
+                <div className="text-2xl sm:text-3xl mb-1">{s.icon}</div>
+                <div className="font-nunito font-black text-xl sm:text-2xl text-clay-foreground">{s.value}</div>
+                <div className="text-xs sm:text-sm text-clay-muted font-medium">{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex items-center justify-center gap-3 text-xs font-medium text-clay-muted">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span>Public browsing</span>
+            <span className="w-px h-4 bg-clay-muted/30"></span>
+            {isAuthenticated ? (
+              <span className="flex items-center gap-1.5 text-[#7C3AED]"><span className="w-2 h-2 rounded-full bg-[#7C3AED]"></span>Signed in as {user?.name}</span>
+            ) : (
+              <button onClick={() => { setShowAuthModal(true); setAuthMode('signin'); }} className="flex items-center gap-1.5 hover:text-[#7C3AED] transition-colors"><span className="w-2 h-2 rounded-full bg-[#F59E0B]"></span>Sign in for private features</button>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
+  // ─── FEATURED LISTINGS ──────────────────────────────────
+  const FeaturedListings = () => (
+    <section className="relative z-10 px-4 sm:px-6 py-12 sm:py-20 reveal">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8 sm:mb-12">
+          <div><h2 className="font-nunito font-extrabold text-3xl sm:text-4xl md:text-5xl text-clay-foreground">🔥 Featured <span className="clay-text-gradient">Listings</span></h2><p className="text-clay-muted text-base sm:text-lg mt-2 font-medium">Handpicked premium land opportunities</p></div>
+          <button onClick={() => setCurrentPage('listings')} className="hidden sm:flex items-center gap-2 clay-btn clay-btn-secondary text-sm">View All <Icons.ChevronRight className="w-4 h-4" /></button>
+        </div>
+        {featuredProperties.length === 0 ? (
+          <div className="clay-card p-12 text-center rounded-[32px]"><div className="text-4xl mb-3">🏗️</div><p className="text-clay-muted font-medium">No featured listings yet. Check back soon!</p></div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {featuredProperties.map((p, idx) => <PropertyCard key={p.id} property={p} featured={p.isFeatured} delay={(idx % 3) + 1} />)}
+          </div>
+        )}
+        <div className="mt-6 text-center sm:hidden"><button onClick={() => setCurrentPage('listings')} className="clay-btn clay-btn-secondary text-sm w-full">View All Listings →</button></div>
+      </div>
+    </section>
+  );
+
+  // ─── HOW IT WORKS ──────────────────────────────────────
+  const HowItWorks = () => {
+    const steps = [
+      { icon: '🔍', title: 'Explore Listings', desc: 'Browse through our curated collection of premium land listings with detailed information and high-quality imagery.' },
+      { icon: '💬', title: 'Connect & Tour', desc: 'Reach out to sellers directly, schedule virtual tours, and get all the information you need to make an informed decision.' },
+      { icon: '📝', title: 'Close with Confidence', desc: 'Our team guides you through the entire closing process with secure transactions and full legal support.' },
+    ];
+    return (
+      <section className="relative z-10 px-4 sm:px-6 py-12 sm:py-20 bg-white/20 reveal">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16"><h2 className="font-nunito font-extrabold text-3xl sm:text-4xl md:text-5xl text-clay-foreground">How It <span className="clay-text-gradient">Works</span></h2><p className="text-clay-muted text-base sm:text-lg mt-3 font-medium">Three simple steps to your perfect land</p></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+            {steps.map((s, i) => (
+              <div key={i} className={`clay-card p-6 sm:p-8 text-center group hover:shadow-clay-card-hover hover:-translate-y-2 transition-all duration-500 reveal reveal-delay-${i+2}`}>
+                <div className="relative inline-block">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-[#A78BFA] to-[#7C3AED] flex items-center justify-center text-4xl sm:text-5xl shadow-clay-button group-hover:shadow-clay-button-hover group-hover:scale-110 transition-all duration-500">{s.icon}</div>
+                  <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-white shadow-clay-button flex items-center justify-center font-nunito font-black text-sm text-[#7C3AED]">{i + 1}</div>
+                </div>
+                <h3 className="font-nunito font-extrabold text-xl sm:text-2xl mt-4">{s.title}</h3>
+                <p className="text-clay-muted text-sm sm:text-base leading-relaxed mt-2">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  };
+
+  // ─── TESTIMONIALS ──────────────────────────────────────
+  const TestimonialsSection = () => (
+    <section className="relative z-10 px-4 sm:px-6 py-12 sm:py-20 reveal">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16"><h2 className="font-nunito font-extrabold text-3xl sm:text-4xl md:text-5xl text-clay-foreground">💬 What Our <span className="clay-text-gradient">Community Says</span></h2></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
+          {TESTIMONIALS.map((t, idx) => (
+            <div key={t.id} className={`clay-card p-6 sm:p-8 hover:shadow-clay-card-hover hover:-translate-y-2 transition-all duration-500 reveal reveal-delay-${idx+1}`}>
+              <div className="flex items-center gap-3 mb-4"><div className="w-12 h-12 rounded-full overflow-hidden shadow-clay-button flex-shrink-0"><img src={t.avatar} alt={t.name} className="w-full h-full object-cover" /></div><div><div className="font-nunito font-bold text-clay-foreground">{t.name}</div><div className="text-sm text-clay-muted font-medium">{t.role}</div></div></div>
+              <div className="flex gap-0.5 mb-3">{[...Array(5)].map((_, i) => <Icons.Star key={i} className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />)}</div>
+              <p className="text-clay-muted text-sm sm:text-base leading-relaxed">"{t.text}"</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  // ─── RECENT ACTIVITY ──────────────────────────────────
+  const RecentActivity = () => (
+    <section className="relative z-10 px-4 sm:px-6 py-12 sm:py-20 bg-white/20 reveal">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8 sm:mb-12">
+          <div><h2 className="font-nunito font-extrabold text-3xl sm:text-4xl md:text-5xl text-clay-foreground">📊 Recent <span className="clay-text-gradient">Activity</span></h2></div>
+          <div className="flex items-center gap-2 text-sm text-clay-muted font-medium"><Icons.TrendingUp className="w-4 h-4 text-[#10B981]" /><span>Live updates</span></div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {RECENT_ACTIVITY.map((a, idx) => (
+            <div key={a.id} className={`clay-card p-4 sm:p-5 flex items-center justify-between rounded-[24px] hover:shadow-clay-card-hover transition-all reveal reveal-delay-${idx+1}`}>
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-xl ${a.type === 'sold' ? 'bg-[#10B981]/10' : 'bg-[#0EA5E9]/10'}`}>{a.type === 'sold' ? '✅' : '📌'}</div>
+                <div><div className="font-nunito font-bold text-sm sm:text-base">{a.title}</div><div className="text-xs sm:text-sm text-clay-muted font-medium flex items-center gap-2"><span>{a.type === 'sold' ? 'Sold for' : 'Listed at'} {formatPrice(a.price)}</span><span>·</span><span className="text-[#7C3AED]">{a.time}</span></div></div>
+              </div>
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${a.type === 'sold' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-[#0EA5E9]/10 text-[#0EA5E9]'}`}>{a.type === 'sold' ? 'SOLD' : 'NEW'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  // ─── FOOTER ──────────────────────────────────────────────
+  const Footer = () => (
+    <footer className="relative z-10 px-4 sm:px-6 py-12 sm:py-16 bg-white/30 mt-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
+          <div className="col-span-2 md:col-span-1">
+            <div className="flex items-center gap-3 mb-4 cursor-pointer" onClick={() => setCurrentPage('home')}>
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#A78BFA] to-[#7C3AED] flex items-center justify-center shadow-clay-button text-white font-nunito font-black text-lg">CE</div>
+              <span className="font-nunito font-extrabold text-xl text-clay-foreground">Clay<span className="text-[#7C3AED]">Estates</span></span>
+            </div>
+            <p className="text-clay-muted text-sm leading-relaxed max-w-xs">The premium marketplace for land buyers and sellers. Trusted by thousands.</p>
+            <div className="flex gap-3 mt-4"><span className="w-10 h-10 rounded-full bg-white shadow-clay-button flex items-center justify-center text-lg hover:shadow-clay-button-hover transition-all cursor-pointer">📱</span><span className="w-10 h-10 rounded-full bg-white shadow-clay-button flex items-center justify-center text-lg hover:shadow-clay-button-hover transition-all cursor-pointer">🐦</span><span className="w-10 h-10 rounded-full bg-white shadow-clay-button flex items-center justify-center text-lg hover:shadow-clay-button-hover transition-all cursor-pointer">📸</span></div>
+          </div>
+          <div><h4 className="font-nunito font-extrabold text-sm uppercase tracking-wider text-clay-foreground mb-4">Platform</h4><ul className="space-y-2 text-sm text-clay-muted font-medium"><li><button onClick={() => setCurrentPage('listings')} className="hover:text-[#7C3AED] transition-colors">Browse Listings</button></li>{isAuthenticated && <li><button onClick={() => setCurrentPage('dashboard')} className="hover:text-[#7C3AED] transition-colors">Dashboard</button></li>}<li><button className="hover:text-[#7C3AED] transition-colors">How It Works</button></li>{isAuthenticated && <li><button onClick={() => setShowListForm(true)} className="hover:text-[#7C3AED] transition-colors">List a Property</button></li>}</ul></div>
+          <div><h4 className="font-nunito font-extrabold text-sm uppercase tracking-wider text-clay-foreground mb-4">Resources</h4><ul className="space-y-2 text-sm text-clay-muted font-medium"><li><button className="hover:text-[#7C3AED] transition-colors">Blog</button></li><li><button className="hover:text-[#7C3AED] transition-colors">FAQs</button></li><li><button className="hover:text-[#7C3AED] transition-colors">Support</button></li><li><button className="hover:text-[#7C3AED] transition-colors">Community</button></li></ul></div>
+          <div><h4 className="font-nunito font-extrabold text-sm uppercase tracking-wider text-clay-foreground mb-4">Connect</h4><ul className="space-y-2 text-sm text-clay-muted font-medium"><li className="flex items-center gap-2"><Icons.Phone className="w-4 h-4" /> (555) 123-4567</li><li className="flex items-center gap-2"><Icons.Mail className="w-4 h-4" /> hello@clayestates.com</li><li className="flex items-center gap-2"><Icons.Map className="w-4 h-4" /> 123 Clay St, SF, CA</li></ul></div>
+        </div>
+        <div className="mt-10 pt-6 border-t border-[#e0dae8] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-clay-muted font-medium">
+          <div className="flex items-center gap-2">
+            <span className="inline-block px-3 py-1 rounded-full bg-[#7C3AED]/10 text-[#7C3AED] font-bold">{screenSize}</span>
+            <span>© 2026 ClayEstates. All rights reserved.</span>
+          </div>
+          <div className="flex gap-6"><button className="hover:text-clay-foreground transition-colors">Privacy Policy</button><button className="hover:text-clay-foreground transition-colors">Terms of Service</button><button className="hover:text-clay-foreground transition-colors">Cookie Policy</button></div>
+        </div>
+      </div>
+    </footer>
+  );
+
+  // ─── LISTINGS PAGE ─────────────────────────────────────
+  const ListingsPage = () => (
+    <div className="relative z-10 px-4 sm:px-6 py-6 sm:py-10">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 sm:mb-8 reveal">
+          <div><h2 className="font-nunito font-extrabold text-3xl sm:text-4xl md:text-5xl text-clay-foreground">All <span className="clay-text-gradient">Listings</span></h2><p className="text-clay-muted text-base sm:text-lg font-medium mt-1">{filteredProperties.length} properties found</p></div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 bg-white/40 rounded-[20px] p-1 shadow-clay-pressed">
+              <button onClick={() => setIsFilterOpen(!isFilterOpen)} className={`px-4 py-2 rounded-[16px] text-sm font-bold transition-all ${isFilterOpen ? 'bg-[#7C3AED] text-white shadow-clay-button' : 'text-clay-muted hover:text-clay-foreground'}`}><Icons.Filter className="w-4 h-4 inline mr-1.5" />Filters</button>
+            </div>
+            {isAuthenticated && <button onClick={() => setShowListForm(true)} className="clay-btn clay-btn-primary text-sm clay-btn-sm"><Icons.Plus className="w-4 h-4 mr-1.5" /> List</button>}
+            <button onClick={() => setShowMortgage(!showMortgage)} className="clay-btn clay-btn-secondary text-sm clay-btn-sm"><Icons.Calculator className="w-4 h-4 mr-1.5" /> Mortgage</button>
+          </div>
+        </div>
+        {isFilterOpen && (
+          <div className="clay-card p-4 sm:p-6 mb-6 sm:mb-8 rounded-[24px] sm:rounded-[32px] flex flex-wrap items-center gap-4 reveal">
+            <div className="flex items-center gap-2"><span className="text-sm font-bold text-clay-muted">Type:</span><select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="clay-input h-12 px-4 rounded-[16px] text-sm bg-[#EFEBF5] shadow-clay-pressed focus:bg-white w-auto min-w-[140px] appearance-none cursor-pointer" style={{ paddingRight:'36px', backgroundImage:'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23635F69%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E")', backgroundPosition:'right 10px center', backgroundRepeat:'no-repeat', backgroundSize:'16px' }}><option value="all">All Types</option><option value="Residential">🏡 Residential</option><option value="Commercial">🏢 Commercial</option><option value="Agricultural">🌾 Agricultural</option><option value="Industrial">🏭 Industrial</option><option value="Plot">📐 Plot</option></select></div>
+            <div className="flex items-center gap-2"><span className="text-sm font-bold text-clay-muted">Price:</span><select value={filterPrice} onChange={(e) => setFilterPrice(e.target.value)} className="clay-input h-12 px-4 rounded-[16px] text-sm bg-[#EFEBF5] shadow-clay-pressed focus:bg-white w-auto min-w-[140px] appearance-none cursor-pointer" style={{ paddingRight:'36px', backgroundImage:'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23635F69%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E")', backgroundPosition:'right 10px center', backgroundRepeat:'no-repeat', backgroundSize:'16px' }}><option value="all">All Prices</option><option value="under250k">Under $250K</option><option value="250k-500k">$250K – $500K</option><option value="500k-1m">$500K – $1M</option><option value="over1m">Over $1M</option></select></div>
+            <button onClick={() => { setFilterType('all'); setFilterPrice('all'); setSearchQuery(''); }} className="text-sm font-bold text-clay-muted hover:text-[#7C3AED] transition-colors">Clear All</button>
+          </div>
+        )}
+        {filteredProperties.length === 0 ? (
+          <div className="clay-card p-12 text-center rounded-[32px] reveal"><div className="text-6xl mb-4">🔍</div><h3 className="font-nunito font-extrabold text-2xl text-clay-foreground">No properties found</h3><p className="text-clay-muted mt-2">Try adjusting your search filters</p><button onClick={() => { setSearchQuery(''); setFilterType('all'); setFilterPrice('all'); }} className="clay-btn clay-btn-primary mt-4">Reset Filters</button></div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {filteredProperties.map((p, idx) => <PropertyCard key={p.id} property={p} delay={(idx % 6) + 1} />)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ─── DETAIL PAGE ──────────────────────────────────────
+  const DetailPage = ({ property, onBack }) => {
+    if (!property) return null;
+    const isFav = favorites.includes(property.id);
+    const isUserListing = property.isUserListing;
+    const hasLocation = !!property.location && property.location.trim() && property.location.trim() !== 'Location not provided';
+    const hasSize = !!property.size && property.size.trim() && property.size.trim() !== 'N/A';
+    const hasPrice = Number(property.price) > 0;
+    return (
+      <div className="relative z-10 px-4 sm:px-6 py-6 sm:py-10">
+        <div className="max-w-5xl mx-auto">
+          <button onClick={onBack} className="flex items-center gap-2 text-clay-muted font-bold hover:text-[#7C3AED] transition-colors mb-4 sm:mb-6"><Icons.ChevronLeft className="w-5 h-5" /> Back to listings</button>
+          <div className="clay-card p-4 sm:p-6 md:p-8 rounded-[32px] sm:rounded-[40px] shadow-clay-card reveal">
+            <div className="relative aspect-[16/9] rounded-[24px] overflow-hidden shadow-clay-button">
+              <img src={property.image} alt={property.title} className="w-full h-full object-cover" />
+              <button onClick={() => toggleFavorite(property.id)} className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/80 backdrop-blur-md shadow-clay-button flex items-center justify-center transition-all hover:scale-110 clay-squish">
+                {isFav ? <Icons.HeartFilled className="w-6 h-6 text-[#DB2777]" /> : <Icons.Heart className="w-6 h-6 text-clay-muted" />}
+              </button>
+              <div className="absolute bottom-4 left-4 flex gap-2">
+                <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${getTypeColor(property.type)} backdrop-blur-sm`}>{getTypeEmoji(property.type)} {property.type}</span>
+                {property.isFeatured && <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#F59E0B]/15 text-[#F59E0B] backdrop-blur-sm border border-[#F59E0B]/20">⭐ Featured</span>}
+                {isUserListing && <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#7C3AED]/15 text-[#7C3AED] backdrop-blur-sm border border-[#7C3AED]/20">Your Listing</span>}
+              </div>
+            </div>
+            <div className="mt-6 sm:mt-8">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div><h1 className="font-nunito font-black text-3xl sm:text-4xl md:text-5xl text-clay-foreground">{property.title || `${property.type || 'Property'} Listing`}</h1><div className="flex items-center gap-3 mt-2 flex-wrap">
+                  {hasLocation && <span className="text-clay-muted font-medium flex items-center gap-1"><Icons.Map className="w-4 h-4" /> {property.location}</span>}
+                  {hasLocation && hasSize && <span className="text-clay-muted">·</span>}
+                  {hasSize && <span className="text-clay-muted font-medium">{property.size}</span>}
+                  {(hasLocation || hasSize) && <span className="text-clay-muted">·</span>}
+                  <div className="flex items-center gap-1"><Icons.Star className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" /><span className="font-bold">{property.rating || 'New'}</span>{property.reviews > 0 && <span className="text-clay-muted text-sm">({property.reviews} reviews)</span>}</div>
+                </div></div>
+                {hasPrice && <div className="text-right"><div className="font-nunito font-black text-3xl sm:text-4xl text-[#7C3AED]">{formatPrice(property.price)}</div><div className="text-sm text-clay-muted font-medium">Listed {new Date(property.listedAt).toLocaleDateString()}</div></div>}
+              </div>
+              {property.features && property.features.length > 0 && (
+                <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {property.features.map((f, i) => <div key={i} className="bg-white/50 rounded-[16px] p-3 text-center shadow-clay-pressed"><div className="text-xl">✅</div><div className="text-xs font-bold text-clay-foreground mt-1">{f}</div></div>)}
+                </div>
+              )}
+              {property.type === 'Plot' && property.plotDetails && (
+                <div className="mt-6 rounded-[24px] bg-[#F5F3FF] p-4 sm:p-5 border border-[#7C3AED]/10">
+                  <h3 className="font-nunito font-extrabold text-xl text-clay-foreground mb-3">📐 Plot Details</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    {property.plotDetails.zoning && <div className="bg-white/60 rounded-[16px] p-3 shadow-clay-pressed"><span className="text-clay-muted block">Zoning</span><span className="font-bold text-clay-foreground">{property.plotDetails.zoning}</span></div>}
+                    {property.plotDetails.titleStatus && <div className="bg-white/60 rounded-[16px] p-3 shadow-clay-pressed"><span className="text-clay-muted block">Title Status</span><span className="font-bold text-clay-foreground">{property.plotDetails.titleStatus}</span></div>}
+                    {property.plotDetails.access && <div className="bg-white/60 rounded-[16px] p-3 shadow-clay-pressed"><span className="text-clay-muted block">Access</span><span className="font-bold text-clay-foreground">{property.plotDetails.access}</span></div>}
+                    {property.plotDetails.utilities && <div className="bg-white/60 rounded-[16px] p-3 shadow-clay-pressed"><span className="text-clay-muted block">Utilities</span><span className="font-bold text-clay-foreground">{property.plotDetails.utilities}</span></div>}
+                    {property.plotDetails.soil && <div className="bg-white/60 rounded-[16px] p-3 shadow-clay-pressed sm:col-span-2"><span className="text-clay-muted block">Soil / Land Use</span><span className="font-bold text-clay-foreground">{property.plotDetails.soil}</span></div>}
+                  </div>
+                </div>
+              )}
+              {property.description && <div className="mt-6"><h3 className="font-nunito font-extrabold text-xl text-clay-foreground mb-2">Description</h3><p className="text-clay-muted text-base sm:text-lg leading-relaxed">{property.description}</p></div>}
+              <div className="mt-6 flex flex-col sm:flex-row gap-4">
+                <a href={property.contact?.phone ? `tel:${property.contact.phone.replace(/[^\d+]/g, '')}` : '#'} className={`clay-btn flex-1 ${property.contact?.phone ? 'clay-btn-primary' : 'clay-btn-secondary opacity-50 pointer-events-none'}`}><Icons.Phone className="w-5 h-5 mr-2" /> Contact Seller</a>
+                <a href={property.contact?.phone ? `https://wa.me/${property.contact.phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent('Hi, I am interested in your property listing. Can you share more details?')}` : '#'} target={property.contact?.phone ? '_blank' : undefined} rel={property.contact?.phone ? 'noreferrer' : undefined} className={`clay-btn flex-1 ${property.contact?.phone ? 'clay-btn-secondary' : 'clay-btn-secondary opacity-50 pointer-events-none'}`}><Icons.Mail className="w-5 h-5 mr-2" /> Send Message</a>
+                <a href={property.contact?.website ? property.contact.website : '#'} target={property.contact?.website ? '_blank' : undefined} rel={property.contact?.website ? 'noreferrer' : undefined} className={`clay-btn flex-1 ${property.contact?.website ? 'clay-btn-outline' : 'clay-btn-outline opacity-50 pointer-events-none'}`}><Icons.Map className="w-5 h-5 mr-2" /> Visit Link</a>
+                <button onClick={() => setShowMortgage(true)} className="clay-btn clay-btn-outline flex-1"><Icons.Calculator className="w-5 h-5 mr-2" /> Calculate Mortgage</button>
+              </div>
+              <div className="mt-6 flex items-center gap-3 p-4 bg-white/40 rounded-[20px] shadow-clay-pressed">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#A78BFA] to-[#7C3AED] flex items-center justify-center text-white font-nunito font-black text-lg shadow-clay-button">{getInitials(property.seller)}</div>
+                <div className="min-w-0 flex-1"><div className="font-nunito font-bold text-clay-foreground">{property.seller}</div><div className="text-sm text-clay-muted font-medium">{isUserListing ? 'Property Owner' : 'Listing Agent'} · {property.reviews || 0} reviews</div>{property.contact && (
+                  <div className="mt-2 flex flex-col sm:flex-row flex-wrap gap-2 text-xs text-clay-muted">
+                    {property.contact.email && <a href={`mailto:${property.contact.email}`} className="hover:text-[#7C3AED]">✉️ {property.contact.email}</a>}
+                    {property.contact.website && <a href={property.contact.website} target="_blank" rel="noreferrer" className="hover:text-[#7C3AED]">🔗 Website</a>}
+                  </div>
+                )}</div>
+                <div className="ml-auto flex gap-1"><Icons.Star className="w-5 h-5 text-[#F59E0B] fill-[#F59E0B]" /><span className="font-bold">{property.rating || 'New'}</span></div>
+              </div>
+              {isUserListing && isAuthenticated && user?.id === property.sellerId && (
+                <div className="mt-4 flex justify-end"><button onClick={() => { deleteUserListing(property.id); onBack(); }} className="text-sm font-bold text-red-500 hover:text-red-600 transition-colors flex items-center gap-2"><Icons.X className="w-4 h-4" /> Remove this listing</button></div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── DASHBOARD ─────────────────────────────────────────
+  const Dashboard = () => {
+    const favCount = favorites.length;
+    const favProperties = allProperties.filter(p => favorites.includes(p.id));
+    const totalValue = favProperties.reduce((sum, p) => sum + p.price, 0);
+    const myListings = userListings;
+
+    if (!isAuthenticated) {
+      return (
+        <div className="relative z-10 px-4 sm:px-6 py-12 sm:py-20 text-center">
+          <div className="max-w-md mx-auto clay-card p-8 sm:p-12 rounded-[32px]">
+            <div className="text-6xl mb-4">🔒</div>
+            <h2 className="font-nunito font-extrabold text-2xl sm:text-3xl text-clay-foreground">Private Dashboard</h2>
+            <p className="text-clay-muted mt-3">Sign in to access your dashboard, saved properties, and listings.</p>
+            <button onClick={() => { setShowAuthModal(true); setAuthMode('signin'); }} className="clay-btn clay-btn-primary mt-6">Sign In</button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative z-10 px-4 sm:px-6 py-6 sm:py-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="reveal">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+              <h2 className="font-nunito font-extrabold text-3xl sm:text-4xl md:text-5xl text-clay-foreground">📊 Your <span className="clay-text-gradient">Dashboard</span></h2>
+              <div className="flex items-center gap-3">
+                <div className="user-avatar w-12 h-12 text-base">{getInitials(user?.name || 'User')}</div>
+                <div className="text-left"><div className="font-nunito font-bold text-clay-foreground">{user?.name}</div><div className="text-xs text-clay-muted">{user?.email}</div></div>
+              </div>
+            </div>
+            <p className="text-clay-muted text-base sm:text-lg font-medium mb-6 sm:mb-8">Manage your saved properties, listings, and account activity.</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            {[{ icon:'❤️', label:'Saved Properties', value:favCount }, { icon:'💰', label:'Total Value', value:formatPrice(totalValue) }, { icon:'📌', label:'Your Listings', value:myListings.length }, { icon:'📬', label:'Messages', value:'3' }].map((s, i) => (
+              <div key={i} className={`clay-card p-4 sm:p-6 text-center rounded-[24px] reveal reveal-delay-${i+1}`}>
+                <div className="text-2xl sm:text-3xl">{s.icon}</div>
+                <div className="font-nunito font-black text-xl sm:text-2xl">{s.value}</div>
+                <div className="text-xs sm:text-sm text-clay-muted font-medium">{s.label}</div>
+              </div>
+            ))}
+          </div>
+          {myListings.length > 0 && (
+            <div className="clay-card p-4 sm:p-6 rounded-[28px] sm:rounded-[32px] mb-6 reveal">
+              <div className="flex items-center justify-between mb-4"><h3 className="font-nunito font-extrabold text-xl sm:text-2xl text-clay-foreground">📌 Your Listings</h3><button onClick={() => setShowListForm(true)} className="clay-btn clay-btn-primary text-sm clay-btn-sm"><Icons.Plus className="w-4 h-4 mr-1.5" /> New</button></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {myListings.map((p, idx) => (
+                  <div key={p.id} className={`clay-card p-3 sm:p-4 rounded-[20px] sm:rounded-[24px] cursor-pointer hover:shadow-clay-card-hover hover:-translate-y-1 transition-all reveal reveal-delay-${(idx % 3) + 1}`} onClick={() => { setSelectedProperty(p); setCurrentPage('detail'); }}>
+                    <img src={p.image} alt={p.title} className="w-full aspect-[16/10] object-cover rounded-[16px]" />
+                    <div className="mt-3"><div className="font-nunito font-bold text-sm sm:text-base line-clamp-1">{p.title}</div><div className="text-sm font-bold text-[#7C3AED]">{formatPrice(p.price)}</div><div className="text-xs text-clay-muted">{p.location}</div></div>
+                    <div className="mt-3 flex gap-2">
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingListingId(p.id);
+                        setListingForm({
+                          title: p.title,
+                          location: p.location,
+                          price: String(p.price),
+                          size: p.size,
+                          type: p.type || 'Residential',
+                          description: p.description,
+                          image: p.image,
+                          features: (p.features || []).join(', '),
+                          plotDetails: p.plotDetails || { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' }
+                        });
+                        setShowListForm(true);
+                      }} className="text-xs font-bold text-[#7C3AED] hover:text-[#5B3CC5] transition-colors">Edit</button>
+                      <button onClick={(e) => { e.stopPropagation(); deleteUserListing(p.id); }} className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors">Remove</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="clay-card p-4 sm:p-6 rounded-[28px] sm:rounded-[32px] reveal">
+            <h3 className="font-nunito font-extrabold text-xl sm:text-2xl text-clay-foreground mb-4">❤️ Saved Properties</h3>
+            {favProperties.length === 0 ? (
+              <div className="text-center py-8 sm:py-12"><div className="text-5xl mb-3">🏡</div><p className="text-clay-muted font-medium">You haven't saved any properties yet.</p><button onClick={() => setCurrentPage('listings')} className="clay-btn clay-btn-primary mt-4 text-sm">Browse Listings</button></div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {favProperties.map((p, idx) => (
+                  <div key={p.id} className={`clay-card p-3 sm:p-4 rounded-[20px] sm:rounded-[24px] cursor-pointer hover:shadow-clay-card-hover hover:-translate-y-1 transition-all reveal reveal-delay-${(idx % 3) + 1}`} onClick={() => { setSelectedProperty(p); setCurrentPage('detail'); }}>
+                    <img src={p.image} alt={p.title} className="w-full aspect-[16/10] object-cover rounded-[16px]" />
+                    <div className="mt-3"><div className="font-nunito font-bold text-sm sm:text-base line-clamp-1">{p.title}</div><div className="text-sm font-bold text-[#7C3AED]">{formatPrice(p.price)}</div><div className="text-xs text-clay-muted">{p.location}</div></div>
+                    <button onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} className="mt-2 text-xs font-bold text-[#DB2777] hover:underline">Remove</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* ─── QUICK ACTIONS (FIXED) ─── */}
+          <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            {[
+              { icon: '📝', label: 'List Property', action: () => setShowListForm(true) },
+              { icon: '🧮', label: 'Mortgage Calc', action: () => setShowMortgage(true) },
+              { icon: '📊', label: 'Market Insights', action: () => showToast('Market insights coming soon!', 'info') },
+              { icon: '💬', label: 'Messages', action: () => showToast('Messages feature coming soon!', 'info') },
+            ].map((s, i) => (
+              <button key={i} onClick={s.action} className={`clay-card p-4 text-center hover:shadow-clay-card-hover hover:-translate-y-1 transition-all reveal reveal-delay-${i + 1}`}>
+                <div className="text-2xl">{s.icon}</div>
+                <div className="text-sm font-bold mt-1">{s.label}</div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-6 clay-card p-4 sm:p-6 rounded-[28px] sm:rounded-[32px] reveal">
+            <h3 className="font-nunito font-extrabold text-xl sm:text-2xl text-clay-foreground mb-4">👤 Account</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+              <div className="flex items-center gap-4">
+                <div className="user-avatar w-16 h-16 text-xl">{getInitials(user?.name || 'User')}</div>
+                <div><div className="font-nunito font-bold text-lg text-clay-foreground">{user?.name}</div><div className="text-sm text-clay-muted">{user?.email}</div><div className="text-xs text-clay-muted mt-1">Joined {new Date(user?.joinedAt).toLocaleDateString()}</div></div>
+              </div>
+              <div className="flex-1" />
+              <button onClick={() => { logout(); setCurrentPage('home'); showToast('Signed out successfully.', 'info'); }} className="clay-btn clay-btn-outline text-sm"><Icons.LogOut className="w-4 h-4 mr-1.5" /> Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── PAGE RENDERER ──────────────────────────────────────
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'home': return <><Hero /><FeaturedListings /><HowItWorks /><TestimonialsSection /><RecentActivity /></>;
+      case 'listings': return <ListingsPage />;
+      case 'detail': return <DetailPage property={selectedProperty} onBack={() => setCurrentPage('listings')} />;
+      case 'dashboard': return <Dashboard />;
+      default: return <Hero />;
+    }
+  };
+
+  // ─── APP ────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center"><div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#A78BFA] to-[#7C3AED] animate-clay-breathe shadow-clay-button mx-auto" /><p className="text-clay-muted font-medium mt-4">Loading...</p></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen relative">
+      <Blobs />
+      <Nav />
+      <main className="relative z-10">{renderPage()}</main>
+      <Footer />
+      <MortgageModal isOpen={showMortgage} onClose={() => setShowMortgage(false)} />
+      <AuthModal />
+      <ListingFormModal />
+      <Toast />
+    </div>
+  );
+}
+
+// ─── WRAP WITH AUTH PROVIDER ────────────────────────────
+function Root() {
+  return (
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  );
+}
+
+// ─── MOUNT ────────────────────────────────────────────────
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<Root />);
+</script>
+</body>
+</html>
