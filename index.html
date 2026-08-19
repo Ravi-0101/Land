@@ -241,12 +241,6 @@ const TESTIMONIALS = [
   { id: 2, name: 'Michael Chen', role: 'Land Developer', avatar: 'https://ui-avatars.com/api/?name=Michael+Chen&background=DB2777&color=fff&bold=true&size=80', text: 'As a developer, I appreciate the detailed property information and seamless transaction process. Highly recommended!' },
   { id: 3, name: 'Emily Rodriguez', role: 'Farmer', avatar: 'https://ui-avatars.com/api/?name=Emily+Rodriguez&background=0EA5E9&color=fff&bold=true&size=80', text: 'Found the perfect agricultural land for my expansion. The mortgage calculator was super helpful!' }
 ];
-const RECENT_ACTIVITY = [
-  { id: 1, type: 'sold', title: 'Sunset Valley Estate', price: 850000, time: '2 hours ago' },
-  { id: 2, type: 'listed', title: 'Golden Prairie Acres', price: 420000, time: '4 hours ago' },
-  { id: 3, type: 'sold', title: 'Harbor View Commercial Lot', price: 1250000, time: '6 hours ago' },
-  { id: 4, type: 'listed', title: 'Pine Ridge Forest Retreat', price: 310000, time: '8 hours ago' }
-];
 const STATS = [
   { icon: '🏡', value: '12,000+', label: 'Properties' },
   { icon: '👥', value: '50,000+', label: 'Active Users' },
@@ -293,6 +287,16 @@ const getTypeEmoji = (type) => {
   return map[type] || '📍';
 };
 const getInitials = (name) => name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const formatRelativeTime = (dateValue) => {
+  const timestamp = Date.parse(dateValue || '');
+  if (!Number.isFinite(timestamp)) return 'Recently';
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (elapsedSeconds < 60) return 'Just now';
+  const units = [[31536000, 'year'], [2592000, 'month'], [86400, 'day'], [3600, 'hour'], [60, 'minute']];
+  const [unitSeconds, unitName] = units.find(([seconds]) => elapsedSeconds >= seconds) || [1, 'second'];
+  const value = Math.floor(elapsedSeconds / unitSeconds);
+  return `${value} ${unitName}${value === 1 ? '' : 's'} ago`;
+};
 const generatePropertyId = () => `CE-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 const DEMO_ACCOUNT = {
   name: 'Demo User',
@@ -1397,27 +1401,32 @@ function App() {
   );
 
   // ─── RECENT ACTIVITY ──────────────────────────────────
-  const RecentActivity = () => (
-    <section className="relative z-10 px-4 sm:px-6 py-12 sm:py-20 bg-white/20 reveal">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8 sm:mb-12">
-          <div><h2 className="font-nunito font-extrabold text-3xl sm:text-4xl md:text-5xl text-clay-foreground">📊 Recent <span className="clay-text-gradient">Activity</span></h2></div>
-          <div className="flex items-center gap-2 text-sm text-clay-muted font-medium"><Icons.TrendingUp className="w-4 h-4 text-[#10B981]" /><span>Live updates</span></div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          {RECENT_ACTIVITY.map((a, idx) => (
-            <div key={a.id} className={`clay-card p-4 sm:p-5 flex items-center justify-between rounded-[24px] hover:shadow-clay-card-hover transition-all reveal reveal-delay-${idx+1}`}>
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-xl ${a.type === 'sold' ? 'bg-[#10B981]/10' : 'bg-[#0EA5E9]/10'}`}>{a.type === 'sold' ? '✅' : '📌'}</div>
-                <div><div className="font-nunito font-bold text-sm sm:text-base">{a.title}</div><div className="text-xs sm:text-sm text-clay-muted font-medium flex items-center gap-2"><span>{a.type === 'sold' ? 'Sold for' : 'Listed at'} {formatPrice(a.price)}</span><span>·</span><span className="text-[#7C3AED]">{a.time}</span></div></div>
+  const RecentActivity = () => {
+    const activities = [...userListings]
+      .filter(listing => hasDisplayableListingData(listing))
+      .sort((first, second) => Date.parse(second.listedAt || second.created_at || '') - Date.parse(first.listedAt || first.created_at || ''))
+      .slice(0, 4)
+      .map(listing => ({ id: listing.id, title: listing.title, price: listing.price, time: formatRelativeTime(listing.listedAt || listing.created_at) }));
+
+    return (
+      <section className="relative z-10 px-4 sm:px-6 py-12 sm:py-20 bg-white/20 reveal">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-8 sm:mb-12">
+            <div><h2 className="font-nunito font-extrabold text-3xl sm:text-4xl md:text-5xl text-clay-foreground">📊 Recent <span className="clay-text-gradient">Activity</span></h2></div>
+            <div className="flex items-center gap-2 text-sm text-clay-muted font-medium"><Icons.TrendingUp className="w-4 h-4 text-[#10B981]" /><span>Live updates</span></div>
+          </div>
+          {activities.length ? <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {activities.map((activity, idx) => (
+              <div key={activity.id} className={`clay-card p-4 sm:p-5 flex items-center justify-between rounded-[24px] hover:shadow-clay-card-hover transition-all reveal reveal-delay-${idx + 1}`}>
+                <div className="flex items-center gap-3 sm:gap-4"><div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-xl bg-[#0EA5E9]/10">📌</div><div><div className="font-nunito font-bold text-sm sm:text-base">{activity.title}</div><div className="text-xs sm:text-sm text-clay-muted font-medium flex items-center gap-2"><span>Listed at {formatPrice(activity.price)}</span><span>·</span><span className="text-[#7C3AED]">{activity.time}</span></div></div></div>
+                <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#0EA5E9]/10 text-[#0EA5E9]">NEW</span>
               </div>
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${a.type === 'sold' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-[#0EA5E9]/10 text-[#0EA5E9]'}`}>{a.type === 'sold' ? 'SOLD' : 'NEW'}</span>
-            </div>
-          ))}
+            ))}
+          </div> : <div className="clay-card p-8 text-center text-clay-muted font-medium">No recent activity yet.</div>}
         </div>
-      </div>
-    </section>
-  );
+      </section>
+    );
+  };
 
   // ─── FOOTER ──────────────────────────────────────────────
   const Footer = () => (
