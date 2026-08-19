@@ -285,6 +285,7 @@ const getTypeEmoji = (type) => {
   return map[type] || '📍';
 };
 const getInitials = (name) => name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const generatePropertyId = () => `CE-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 const DEMO_ACCOUNT = {
   name: 'Demo User',
   email: 'demo@clayestates.com',
@@ -316,6 +317,7 @@ const normalizeListingForDisplay = (listing) => {
     size,
     price,
     features,
+    plotCount: listing.type === 'Plot' ? Math.max(0, Number(listing.plotCount) || 0) : 0,
     images: Array.isArray(listing.images) && listing.images.length > 0 ? listing.images : [listing.image || DEFAULT_PROPERTY_IMAGE],
     languages: Array.isArray(listing.languages) && listing.languages.length > 0
       ? listing.languages.map(normalizeLanguageName).filter(Boolean)
@@ -347,12 +349,31 @@ const hasDisplayableListingData = (listing) => {
   );
 };
 
-const readFilesAsDataUrls = (files) => Promise.all(Array.from(files || []).filter(file => file && file.type && file.type.startsWith('image/')).map(file => new Promise((resolve, reject) => {
+const readImageAsDataUrl = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
-  reader.onload = () => resolve(reader.result);
+  reader.onload = () => {
+    const image = new Image();
+    image.onload = () => {
+      const maxDimension = 1600;
+      const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) {
+        resolve(reader.result);
+        return;
+      }
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.78));
+    };
+    image.onerror = () => reject(new Error('Failed to decode image file'));
+    image.src = reader.result;
+  };
   reader.onerror = () => reject(new Error('Failed to read image file'));
   reader.readAsDataURL(file);
-})));
+});
+const readFilesAsDataUrls = (files) => Promise.all(Array.from(files || []).filter(file => file && file.type && file.type.startsWith('image/')).slice(0, 5).map(readImageAsDataUrl));
 
 // ─── AUTH CONTEXT ──────────────────────────────────────────
 const AuthContext = createContext(null);
@@ -497,7 +518,7 @@ function App() {
   });
   const [listingForm, setListingForm] = useState({
     title: '', location: '', price: '', size: '', type: 'Residential',
-    description: '', image: DEFAULT_PROPERTY_IMAGE,
+    description: '', plotCount: '', image: DEFAULT_PROPERTY_IMAGE,
     images: [],
     features: '',
     contact: { phone: '', email: '', website: '' },
@@ -611,7 +632,13 @@ function App() {
       return;
     }
 
-    localStorage.setItem('clay_user_listings', JSON.stringify(cleanedListings));
+    try {
+      localStorage.setItem('clay_user_listings', JSON.stringify(cleanedListings));
+    } catch (error) {
+      if (error?.name === 'QuotaExceededError') {
+        showToast('Images are too large for this device. Choose fewer or smaller images.', 'error');
+      }
+    }
   }, [userListings]);
 
   // ─── SCROLL REVEAL ─────────────────────────────────────
@@ -695,6 +722,7 @@ function App() {
       size,
       type: listingForm.type,
       description,
+      plotCount: listingForm.type === 'Plot' ? Math.max(0, parseInt(listingForm.plotCount, 10) || 0) : 0,
       image: normalizedImages[0],
       images: normalizedImages,
       features: String(listingForm.features || '').split(',').map(f => sanitizeText(f)).filter(Boolean),
@@ -724,7 +752,7 @@ function App() {
       setShowListForm(false);
       setListingForm({
         title: '', location: '', price: '', size: '', type: 'Residential',
-        description: '', image: DEFAULT_PROPERTY_IMAGE,
+        description: '', plotCount: '', image: DEFAULT_PROPERTY_IMAGE,
         images: [],
         features: '',
         contact: { phone: '', email: '', website: '' },
@@ -735,7 +763,7 @@ function App() {
     }
 
     const newListing = {
-      id: Date.now(),
+      id: generatePropertyId(),
       ...baseListing,
       seller: user.name,
       rating: 0,
@@ -749,7 +777,7 @@ function App() {
     setShowListForm(false);
     setListingForm({
       title: '', location: '', price: '', size: '', type: 'Residential',
-      description: '', image: DEFAULT_PROPERTY_IMAGE,
+      description: '', plotCount: '', image: DEFAULT_PROPERTY_IMAGE,
       images: [],
       features: '',
       contact: { phone: '', email: '', website: '' },
@@ -927,6 +955,10 @@ function App() {
             {listingForm.type === 'Plot' && (
               <div className="rounded-[24px] bg-[#F5F3FF] p-4 sm:p-5 border border-[#7C3AED]/10">
                 <h4 className="font-nunito font-extrabold text-lg text-clay-foreground mb-3">📐 Plot Details</h4>
+                <div className="form-group">
+                  <label htmlFor="plot-count">Number of plots available</label>
+                  <input id="plot-count" type="number" min="1" step="1" value={listingForm.plotCount} onChange={(e) => setListingForm(prev => ({ ...prev, plotCount: e.target.value }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="e.g. 25" />
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="form-group mb-0">
                     <label>Zoning</label>
@@ -972,7 +1004,7 @@ function App() {
               </div>
             </div>
             <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => { setShowListForm(false); setEditingListingId(null); setListingForm({ title: '', location: '', price: '', size: '', type: 'Residential', description: '', image: DEFAULT_PROPERTY_IMAGE, images: [], features: '', contact: { phone: '', email: '', website: '' }, plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' } }); }} className="clay-btn clay-btn-secondary flex-1 text-sm">Cancel</button>
+              <button type="button" onClick={() => { setShowListForm(false); setEditingListingId(null); setListingForm({ title: '', location: '', price: '', size: '', type: 'Residential', description: '', plotCount: '', image: DEFAULT_PROPERTY_IMAGE, images: [], features: '', contact: { phone: '', email: '', website: '' }, plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' } }); }} className="clay-btn clay-btn-secondary flex-1 text-sm">Cancel</button>
               <button type="submit" className="clay-btn clay-btn-primary flex-1 text-sm">{editingListingId ? 'Update Property' : 'List Property'}</button>
             </div>
           </form>
@@ -1128,6 +1160,7 @@ function App() {
           <div className="mt-3 flex items-center gap-3 flex-wrap">
             {hasPrice && <span className="font-nunito font-black text-xl sm:text-2xl text-[#7C3AED]">{formatPrice(property.price)}</span>}
             {hasSize && <span className="text-xs text-clay-muted font-medium">· {property.size}</span>}
+            {property.type === 'Plot' && property.plotCount > 0 && <span className="text-xs text-clay-muted font-medium">· {property.plotCount} plots available</span>}
           </div>
           <div className="mt-3 flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-sm">
@@ -1372,6 +1405,7 @@ function App() {
                   {hasLocation && <span className="text-clay-muted font-medium flex items-center gap-1"><Icons.Map className="w-4 h-4" /> {property.location}</span>}
                   {hasLocation && hasSize && <span className="text-clay-muted">·</span>}
                   {hasSize && <span className="text-clay-muted font-medium">{property.size}</span>}
+                  {property.type === 'Plot' && property.plotCount > 0 && <span className="text-clay-muted font-medium">· {property.plotCount} plots available</span>}
                   {(hasLocation || hasSize) && <span className="text-clay-muted">·</span>}
                   <div className="flex items-center gap-1"><Icons.Star className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" /><span className="font-bold">{property.rating || 'New'}</span>{property.reviews > 0 && <span className="text-clay-muted text-sm">({property.reviews} reviews)</span>}</div>
                 </div></div>
@@ -1397,7 +1431,7 @@ function App() {
               {property.description && <div className="mt-6"><h3 className="font-nunito font-extrabold text-xl text-clay-foreground mb-2">Description</h3><p className="text-clay-muted text-base sm:text-lg leading-relaxed">{property.description}</p></div>}
               <div className="mt-6 flex flex-col sm:flex-row gap-4">
                 <a href={property.contact?.phone ? `tel:${property.contact.phone.replace(/[^\d+]/g, '')}` : '#'} className={`clay-btn flex-1 ${property.contact?.phone ? 'clay-btn-primary' : 'clay-btn-secondary opacity-50 pointer-events-none'}`}><Icons.Phone className="w-5 h-5 mr-2" /> Contact Seller</a>
-                <a href={(property.contact?.whatsapp || property.contact?.phone) ? `https://wa.me/${(property.contact.whatsapp || property.contact.phone).replace(/[^\d]/g, '')}?text=${encodeURIComponent('Hi, I am interested in your property listing. Can you share more details?')}` : '#'} target={(property.contact?.whatsapp || property.contact?.phone) ? '_blank' : undefined} rel={(property.contact?.whatsapp || property.contact?.phone) ? 'noreferrer' : undefined} className={`clay-btn flex-1 ${(property.contact?.whatsapp || property.contact?.phone) ? 'clay-btn-secondary' : 'clay-btn-secondary opacity-50 pointer-events-none'}`}><Icons.Mail className="w-5 h-5 mr-2" /> Send Message</a>
+                <a href={(property.contact?.whatsapp || property.contact?.phone) ? `https://wa.me/${(property.contact.whatsapp || property.contact.phone).replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hi, I am interested in your property listing. Property ID: ${property.id}${property.title ? ` (${property.title})` : ''}. Can you share more details?`)}` : '#'} target={(property.contact?.whatsapp || property.contact?.phone) ? '_blank' : undefined} rel={(property.contact?.whatsapp || property.contact?.phone) ? 'noreferrer' : undefined} className={`clay-btn flex-1 ${(property.contact?.whatsapp || property.contact?.phone) ? 'clay-btn-secondary' : 'clay-btn-secondary opacity-50 pointer-events-none'}`}><Icons.Mail className="w-5 h-5 mr-2" /> Send Message</a>
                 <a href={property.contact?.website ? property.contact.website : '#'} target={property.contact?.website ? '_blank' : undefined} rel={property.contact?.website ? 'noreferrer' : undefined} className={`clay-btn flex-1 ${property.contact?.website ? 'clay-btn-outline' : 'clay-btn-outline opacity-50 pointer-events-none'}`}><Icons.Map className="w-5 h-5 mr-2" /> Visit Link</a>
                 <button onClick={() => setShowMortgage(true)} className="clay-btn clay-btn-outline flex-1"><Icons.Calculator className="w-5 h-5 mr-2" /> Calculate Mortgage</button>
               </div>
@@ -1483,6 +1517,7 @@ function App() {
                           size: p.size,
                           type: p.type || 'Residential',
                           description: p.description,
+                          plotCount: p.plotCount || '',
                           image: p.image,
                           images: p.images || [p.image].filter(Boolean),
                           features: (p.features || []).join(', '),
