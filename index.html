@@ -449,21 +449,88 @@ const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('clay_user');
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setUser(parsed);
-        setIsAuthenticated(true);
-      } catch { localStorage.removeItem('clay_user'); }
+  const hydrateSupabaseUser = async (authUser) => {
+    if (!authUser) {
+      setUser(null);
+      setIsAuthenticated(false);
+      return null;
     }
-    setIsLoading(false);
+    const { data: profile, error } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    if (error) throw error;
+    const userData = {
+      id: authUser.id,
+      email: authUser.email || profile?.email || '',
+      name: profile?.name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+      avatar: profile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name || authUser.email || 'User')}&background=7C3AED&color=fff&bold=true&size=80`,
+      joinedAt: profile?.created_at || authUser.created_at,
+      ...profile,
+    };
+    setUser(userData);
+    setIsAuthenticated(true);
+    return userData;
+  };
+
+  useEffect(() => {
+    if (!supabaseClient) {
+      const storedUser = localStorage.getItem('clay_user');
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          setUser(parsed);
+          setIsAuthenticated(true);
+        } catch { localStorage.removeItem('clay_user'); }
+      }
+      setIsLoading(false);
+      return undefined;
+    }
+
+    let isMounted = true;
+    supabaseClient.auth.getSession().then(async ({ data, error }) => {
+      if (error) return;
+      if (data.session && isMounted) {
+        try { await hydrateSupabaseUser(data.session.user); } catch { setUser(null); setIsAuthenticated(false); }
+      }
+      if (isMounted) setIsLoading(false);
+    });
+    const { data: authListener } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        setUser(null);
+        setIsAuthenticated(false);
+        return;
+      }
+      setTimeout(() => hydrateSupabaseUser(session.user).catch(() => {
+        setUser(null);
+        setIsAuthenticated(false);
+      }), 0);
+    });
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
-  const login = (email, password) => {
+  const login = async (email, password) => {
     const normalizedEmail = (email || '').trim();
     const normalizedPassword = (password || '').trim();
+
+    if (!normalizedEmail || !normalizedPassword) return { success: false, error: 'Email and password are required.' };
+    if (!isValidEmail(normalizedEmail)) return { success: false, error: 'Please enter a valid email address.' };
+    if (normalizedPassword.length < 8) return { success: false, error: 'Password must be at least 8 characters.' };
+
+    if (supabaseClient) {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email: normalizedEmail, password: normalizedPassword });
+      if (error) return { success: false, error: error.message };
+      try {
+        const userData = await hydrateSupabaseUser(data.user);
+        return { success: true, user: userData };
+      } catch (profileError) {
+        return { success: false, error: profileError.message || 'Your account profile could not be loaded.' };
+      }
+    }
 
     if (normalizedEmail.toLowerCase() === DEMO_ACCOUNT.email.toLowerCase() && normalizedPassword === DEMO_ACCOUNT.password) {
       const userData = {
@@ -479,15 +546,6 @@ const AuthProvider = ({ children }) => {
       return { success: true, user: userData };
     }
 
-    if (!normalizedEmail || !normalizedPassword) {
-      return { success: false, error: 'Email and password are required.' };
-    }
-    if (!isValidEmail(normalizedEmail)) {
-      return { success: false, error: 'Please enter a valid email address.' };
-    }
-    if (normalizedPassword.length < 8) {
-      return { success: false, error: 'Password must be at least 8 characters.' };
-    }
     const userData = {
       id: 'user_' + Date.now(),
       email: normalizedEmail,
@@ -501,7 +559,7 @@ const AuthProvider = ({ children }) => {
     return { success: true, user: userData };
   };
 
-  const signup = (name, email, password) => {
+  const signup = async (name, email, password) => {
     if (!name || !email || !password) {
       return { success: false, error: 'Please fill all fields.' };
     }
@@ -513,6 +571,19 @@ const AuthProvider = ({ children }) => {
     }
     if (password.length < 8) {
       return { success: false, error: 'Password must be at least 8 characters.' };
+    }
+    if (supabaseClient) {
+      const { data, error } = await supabaseClient.auth.signUp({ email: email.trim(), password, options: { data: { name: name.trim() } } });
+      if (error) return { success: false, error: error.message };
+      if (!data.user || !data.session) return { success: false, error: 'Check your email to confirm your account, then sign in.' };
+      const { error: profileError } = await supabaseClient.from('profiles').upsert({ id: data.user.id, name: name.trim(), email: email.trim(), languages: [] });
+      if (profileError) return { success: false, error: profileError.message };
+      try {
+        const userData = await hydrateSupabaseUser(data.user);
+        return { success: true, user: userData };
+      } catch (profileError) {
+        return { success: false, error: profileError.message || 'Your account profile could not be created.' };
+      }
     }
     const userData = {
       id: 'user_' + Date.now(),
@@ -527,15 +598,20 @@ const AuthProvider = ({ children }) => {
     return { success: true, user: userData };
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (supabaseClient) await supabaseClient.auth.signOut();
     localStorage.removeItem('clay_user');
     setUser(null);
     setIsAuthenticated(false);
     // Favorites will be cleared by the App component's effect
   };
 
-  const updateProfile = (profile) => {
+  const updateProfile = async (profile) => {
     if (!user) return { success: false, error: 'You must be signed in to update your profile.' };
+    if (supabaseClient) {
+      const { error } = await supabaseClient.from('profiles').update({ ...profile, email: user.email }).eq('id', user.id);
+      if (error) return { success: false, error: error.message };
+    }
     const updatedUser = { ...user, ...profile };
     localStorage.setItem('clay_user', JSON.stringify(updatedUser));
     setUser(updatedUser);
@@ -664,9 +740,9 @@ function App() {
     event.target.value = '';
   };
 
-  const saveProfile = (event) => {
+  const saveProfile = async (event) => {
     event.preventDefault();
-    const result = updateProfile({
+    const result = await updateProfile({
       name: profileForm.name.trim(),
       address: profileForm.address.trim(),
       city: profileForm.city.trim(),
@@ -773,11 +849,11 @@ function App() {
   }, [isAuthenticated]);
 
   // ─── AUTH HANDLERS ─────────────────────────────────────
-  const handleAuthSubmit = (e) => {
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
     if (authMode === 'signin') {
-      const result = login(authEmail, authPassword);
+      const result = await login(authEmail, authPassword);
       if (result.success) {
         setShowAuthModal(false);
         setAuthEmail(''); setAuthPassword('');
@@ -786,7 +862,7 @@ function App() {
         setAuthError(result.error);
       }
     } else {
-      const result = signup(authName, authEmail, authPassword);
+      const result = await signup(authName, authEmail, authPassword);
       if (result.success) {
         setShowAuthModal(false);
         setAuthEmail(''); setAuthPassword(''); setAuthName('');

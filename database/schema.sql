@@ -130,6 +130,8 @@ using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 drop policy if exists "Users can view their profile" on public.profiles;
 create policy "Users can view their profile" on public.profiles for select to authenticated using (id = auth.uid());
+drop policy if exists "Users can create their profile" on public.profiles;
+create policy "Users can create their profile" on public.profiles for insert to authenticated with check (id = auth.uid());
 drop policy if exists "Users can update their profile" on public.profiles;
 create policy "Users can update their profile" on public.profiles for update to authenticated
 using (id = auth.uid()) with check (id = auth.uid());

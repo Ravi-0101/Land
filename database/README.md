@@ -29,4 +29,4 @@ The page will load active listings from Supabase when this object is configured.
 
 ## Authentication note
 
-The current demo UI keeps its sign-in and sign-up flow in localStorage. The database policies intentionally allow listing writes only for Supabase-authenticated users. Listing reads will work immediately after configuration; move the UI auth methods to Supabase Auth before enabling production listing creation, profile updates, favorites, or inquiries.
+When a valid Supabase URL and public anon key are configured, the UI uses Supabase Auth for sign-in, sign-up, sessions, logout, and profile updates. Run this schema after enabling email authentication so users can create their own profile rows. With no valid Supabase configuration, the page uses localStorage fallback mode for development only.
