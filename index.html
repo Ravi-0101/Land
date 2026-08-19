@@ -11,6 +11,7 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     /* ─── CLAYMORPHISM DESIGN TOKENS (unchanged) ─── */
     :root {
@@ -292,6 +293,59 @@ const DEMO_ACCOUNT = {
   password: 'Demo12345',
 };
 const DEFAULT_PROPERTY_IMAGE = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=400&fit=crop';
+const SUPABASE_CONFIG = window.CLAYESTATES_SUPABASE || {};
+const supabaseClient = SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey && window.supabase
+  ? window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey)
+  : null;
+const isDatabaseConnected = Boolean(supabaseClient);
+const loadDatabaseListings = async () => {
+  if (!supabaseClient) return [];
+  const { data, error } = await supabaseClient
+    .from('listings')
+    .select('*, profiles(name, avatar), listing_features(feature), listing_images(url, sort_order)')
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(listing => ({
+    ...listing,
+    id: listing.id,
+    price: Number(listing.price),
+    image: listing.listing_images?.sort((a, b) => a.sort_order - b.sort_order)[0]?.url || DEFAULT_PROPERTY_IMAGE,
+    images: listing.listing_images?.sort((a, b) => a.sort_order - b.sort_order).map(item => item.url) || [],
+    features: listing.listing_features?.map(item => item.feature) || [],
+    isUserListing: true,
+    sellerId: listing.seller_id,
+    seller: listing.profiles?.name || 'ClayEstates seller',
+    sellerAvatar: listing.profiles?.avatar || '',
+  }));
+};
+const saveDatabaseListing = async (listing) => {
+  if (!supabaseClient) return;
+  const { data, error } = await supabaseClient.from('listings').upsert({
+    id: listing.id,
+    seller_id: listing.sellerId,
+    title: listing.title,
+    location: listing.location,
+    price: listing.price,
+    size: listing.size,
+    type: listing.type,
+    description: listing.description,
+    status: 'active',
+    contact: listing.contact,
+    plot_count: listing.plotCount,
+    plot_details: listing.plotDetails,
+  }).select().single();
+  if (error) throw error;
+  await supabaseClient.from('listing_features').delete().eq('listing_id', listing.id);
+  if (listing.features.length) await supabaseClient.from('listing_features').insert(listing.features.map(feature => ({ listing_id: data.id, feature })));
+  await supabaseClient.from('listing_images').delete().eq('listing_id', listing.id);
+  if (listing.images.length) await supabaseClient.from('listing_images').insert(listing.images.map((url, sort_order) => ({ listing_id: data.id, url, sort_order })));
+};
+const archiveDatabaseListing = async (id) => {
+  if (!supabaseClient) return;
+  const { error } = await supabaseClient.from('listings').update({ status: 'archived' }).eq('id', id);
+  if (error) throw error;
+};
 const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
 const normalizeLanguageName = (language) => {
   const value = sanitizeText(language);
@@ -546,6 +600,16 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!isDatabaseConnected) return;
+    loadDatabaseListings()
+      .then(remoteListings => setUserListings(prev => [
+        ...remoteListings,
+        ...prev.filter(localListing => !remoteListings.some(remoteListing => remoteListing.id === localListing.id)),
+      ]))
+      .catch(() => showToast('Database listings could not be loaded. Showing local listings.', 'error'));
+  }, [showToast]);
+
+  useEffect(() => {
     setProfileForm({
       name: user?.name || '',
       address: user?.address || '',
@@ -743,11 +807,14 @@ function App() {
     };
 
     if (editingListingId) {
-      setUserListings(prev => prev.map(item => item.id === editingListingId ? {
-        ...item,
+      const currentListing = userListings.find(item => item.id === editingListingId);
+      const updatedListing = currentListing ? {
+        ...currentListing,
         ...baseListing,
         listedAt: new Date().toISOString(),
-      } : item));
+      } : null;
+      setUserListings(prev => prev.map(item => item.id === editingListingId ? updatedListing : item));
+      if (updatedListing && isDatabaseConnected) saveDatabaseListing(updatedListing).catch(() => showToast('Saved locally, but the database update failed.', 'error'));
       setEditingListingId(null);
       setShowListForm(false);
       setListingForm({
@@ -774,6 +841,7 @@ function App() {
       isUserListing: true,
     };
     setUserListings(prev => [newListing, ...prev]);
+    if (isDatabaseConnected) saveDatabaseListing(newListing).catch(() => showToast('Saved locally, but the database insert failed.', 'error'));
     setShowListForm(false);
     setListingForm({
       title: '', location: '', price: '', size: '', type: 'Residential',
@@ -789,6 +857,7 @@ function App() {
   // ─── DELETE USER LISTING ──────────────────────────────
   const deleteUserListing = useCallback((id) => {
     setUserListings(prev => prev.filter(p => p.id !== id));
+    if (isDatabaseConnected) archiveDatabaseListing(id).catch(() => showToast('Removed locally, but the database update failed.', 'error'));
     showToast('Listing removed successfully.', 'info');
   }, [showToast]);
 
