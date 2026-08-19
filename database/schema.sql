@@ -89,6 +89,38 @@ begin
 end;
 $$;
 
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id, name, email, languages)
+  values (
+    new.id,
+    coalesce(nullif(new.raw_user_meta_data->>'name', ''), split_part(new.email, '@', 1)),
+    new.email,
+    '{}'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+insert into public.profiles (id, name, email, languages)
+select
+  id,
+  coalesce(nullif(raw_user_meta_data->>'name', ''), split_part(email, '@', 1)),
+  email,
+  '{}'
+from auth.users
+on conflict (id) do nothing;
+
 drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at before update on public.profiles
 for each row execute function public.set_updated_at();
