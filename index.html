@@ -12,6 +12,12 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    window.CLAYESTATES_SUPABASE = {
+      url: 'https://mviarlsyzfwwmksrzkrt.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12aWFybHN5emZ3d21rc3J6a3J0IiwiaWF0IjoxNzg3MDc2MjI0LCJleHAiOjIxMDI2NTIyMjR9.vd06M3WH07M6IdLGnmziuD1Wy7Kufcpjr6d0NlC3iYc'
+    };
+  </script>
   <style>
     /* ─── CLAYMORPHISM DESIGN TOKENS (unchanged) ─── */
     :root {
@@ -1715,13 +1721,6 @@ function Root() {
     </AuthProvider>
   );
 }
-
-<script>
-  window.CLAYESTATES_SUPABASE = {
-    url:'mviarlsyzfwwmksrzkrt.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12aWFybHN5emZ3d21rc3J6a3J0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNzYyMjQsImV4cCI6MjEwMjY1MjIyNH0.vd06M3WH07M6IdLGnmziuD1Wy7Kufcpjr6d0NlC3iYc'
-  };
-</script>
 
 // ─── MOUNT ────────────────────────────────────────────────
 const root = ReactDOM.createRoot(document.getElementById('root'));
