@@ -198,7 +198,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useCallback, useMemo, createContext, useContext } = React;
+const { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef, createContext, useContext } = React;
 
 const protectNativeTextEntry = () => {
   const selector = 'input, textarea, select';
@@ -566,6 +566,7 @@ function App() {
   const [toast, setToast] = useState(null);
   const [isProfileEditing, setIsProfileEditing] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', address: '', city: '', state: '', postalCode: '', phone: '', whatsapp: '', preferredContact: 'Phone', bio: '', languages: '', avatar: '' });
+  const profileScrollY = useRef(0);
   const [showListForm, setShowListForm] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
   const [screenSize, setScreenSize] = useState('Desktop');
@@ -631,6 +632,10 @@ function App() {
       avatar: user?.avatar || '',
     });
   }, [user]);
+
+  useLayoutEffect(() => {
+    if (isProfileEditing) window.scrollTo(0, profileScrollY.current);
+  }, [isProfileEditing, profileForm]);
 
   const handleProfileImageChange = async (event) => {
     const file = event.target.files?.[0];
@@ -1662,7 +1667,7 @@ function App() {
               <button onClick={() => setIsProfileEditing(!isProfileEditing)} className="clay-btn clay-btn-outline clay-btn-sm text-sm">{isProfileEditing ? 'Close' : 'Edit Profile'}</button>
             </div>
             {isProfileEditing ? (
-              <form onSubmit={(event) => { event.preventDefault(); saveProfile(event); }} onKeyDown={(event) => { if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') event.preventDefault(); }} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <form onFocusCapture={() => { profileScrollY.current = window.scrollY; }} onSubmit={(event) => { event.preventDefault(); saveProfile(event); }} onKeyDown={(event) => { if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') event.preventDefault(); }} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="form-group md:col-span-3 flex flex-col sm:flex-row sm:items-center gap-4 rounded-[20px] bg-white/50 p-4">
                   <div className="user-avatar w-20 h-20 text-2xl flex-shrink-0">
                     {profileForm.avatar ? <img src={profileForm.avatar} alt="Profile preview" /> : getInitials(profileForm.name || 'User')}
