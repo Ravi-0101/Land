@@ -173,6 +173,7 @@
       box-shadow: var(--shadow-clay-button);
       cursor: pointer; transition: all 0.25s ease;
     }
+    .user-avatar img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
     .user-avatar:hover { transform: scale(1.05); box-shadow: var(--shadow-clay-button-hover); }
     .form-group { margin-bottom: 1rem; }
     .form-group label { display: block; font-weight: 700; font-size: 0.875rem; color: var(--clay-foreground); margin-bottom: 0.25rem; }
@@ -564,7 +565,7 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [toast, setToast] = useState(null);
   const [isProfileEditing, setIsProfileEditing] = useState(false);
-  const [profileForm, setProfileForm] = useState({ name: '', address: '', city: '', state: '', postalCode: '', phone: '', whatsapp: '', preferredContact: 'Phone', bio: '', languages: '' });
+  const [profileForm, setProfileForm] = useState({ name: '', address: '', city: '', state: '', postalCode: '', phone: '', whatsapp: '', preferredContact: 'Phone', bio: '', languages: '', avatar: '' });
   const [showListForm, setShowListForm] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
   const [screenSize, setScreenSize] = useState('Desktop');
@@ -627,8 +628,25 @@ function App() {
       preferredContact: user?.preferredContact || 'Phone',
       bio: user?.bio || '',
       languages: Array.isArray(user?.languages) ? user.languages.join(', ') : (user?.languages || ''),
+      avatar: user?.avatar || '',
     });
   }, [user]);
+
+  const handleProfileImageChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Please choose an image file.', 'error');
+      return;
+    }
+    try {
+      const avatar = await readImageAsDataUrl(file);
+      setProfileForm(prev => ({ ...prev, avatar }));
+    } catch {
+      showToast('That image could not be uploaded. Please try another one.', 'error');
+    }
+    event.target.value = '';
+  };
 
   const saveProfile = (event) => {
     event.preventDefault();
@@ -643,6 +661,7 @@ function App() {
       preferredContact: profileForm.preferredContact,
       bio: profileForm.bio.trim(),
       languages: profileForm.languages.split(',').map(normalizeLanguageName).filter(Boolean),
+      avatar: profileForm.avatar,
     });
     if (!result.success) {
       showToast(result.error, 'error');
@@ -1142,7 +1161,7 @@ function App() {
             {isAuthenticated ? (
               <>
                 <button onClick={() => setShowListForm(true)} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#7C3AED]/10 text-[#7C3AED] font-bold text-sm hover:bg-[#7C3AED]/20 transition-all clay-squish"><Icons.Plus className="w-4 h-4" /><span>List</span></button>
-                <button onClick={() => setCurrentPage('dashboard')} className="user-avatar" title={user?.name}>{getInitials(user?.name || 'User')}</button>
+                <button onClick={() => setCurrentPage('dashboard')} className="user-avatar" title={user?.name}>{user?.avatar ? <img src={user.avatar} alt={`${user?.name || 'User'} profile`} /> : getInitials(user?.name || 'User')}</button>
                 <button onClick={() => { logout(); setCurrentPage('home'); }} className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-2xl text-clay-muted hover:text-clay-foreground transition-all text-sm font-medium"><Icons.LogOut className="w-4 h-4" /></button>
               </>
             ) : (
@@ -1558,7 +1577,7 @@ function App() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
               <h2 className="font-nunito font-extrabold text-3xl sm:text-4xl md:text-5xl text-clay-foreground">📊 Your <span className="clay-text-gradient">Dashboard</span></h2>
               <div className="flex items-center gap-3">
-                <div className="user-avatar w-12 h-12 text-base">{getInitials(user?.name || 'User')}</div>
+                <div className="user-avatar w-12 h-12 text-base">{user?.avatar ? <img src={user.avatar} alt={`${user?.name || 'User'} profile`} /> : getInitials(user?.name || 'User')}</div>
                 <div className="text-left"><div className="font-nunito font-bold text-clay-foreground">{user?.name}</div><div className="text-xs text-clay-muted">{user?.email}</div></div>
               </div>
             </div>
@@ -1644,6 +1663,16 @@ function App() {
             </div>
             {isProfileEditing ? (
               <form onSubmit={(event) => { event.preventDefault(); saveProfile(event); }} onKeyDown={(event) => { if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') event.preventDefault(); }} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="form-group md:col-span-3 flex flex-col sm:flex-row sm:items-center gap-4 rounded-[20px] bg-white/50 p-4">
+                  <div className="user-avatar w-20 h-20 text-2xl flex-shrink-0">
+                    {profileForm.avatar ? <img src={profileForm.avatar} alt="Profile preview" /> : getInitials(profileForm.name || 'User')}
+                  </div>
+                  <div className="flex-1">
+                    <label htmlFor="profile-avatar">Profile picture</label>
+                    <input id="profile-avatar" type="file" accept="image/*" capture="user" onChange={handleProfileImageChange} className="block w-full text-sm text-clay-muted file:mr-3 file:rounded-xl file:border-0 file:bg-[#7C3AED]/10 file:px-4 file:py-2 file:font-bold file:text-[#7C3AED] file:cursor-pointer" />
+                    <p className="text-xs text-clay-muted mt-2">Choose a photo from your device or take one with your camera.</p>
+                  </div>
+                </div>
                 <div className="form-group"><label htmlFor="profile-name">Full name</label><input id="profile-name" type="text" value={profileForm.name} onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))} className="clay-input h-14 text-base" placeholder="Your full name" required /></div>
                 <div className="form-group md:col-span-2"><label htmlFor="profile-address">Street address</label><input id="profile-address" type="text" value={profileForm.address} onChange={(e) => setProfileForm(prev => ({ ...prev, address: e.target.value }))} className="clay-input h-14 text-base" placeholder="Street and building number" /></div>
                 <div className="form-group"><label htmlFor="profile-city">City</label><input id="profile-city" type="text" value={profileForm.city} onChange={(e) => setProfileForm(prev => ({ ...prev, city: e.target.value }))} className="clay-input h-14 text-base" placeholder="City" /></div>
@@ -1659,7 +1688,7 @@ function App() {
             ) : (
               <div className="flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6">
                 <div className="flex items-center gap-4 min-w-[220px]">
-                  <div className="user-avatar w-16 h-16 text-xl">{getInitials(user?.name || 'User')}</div>
+                  <div className="user-avatar w-16 h-16 text-xl">{user?.avatar ? <img src={user.avatar} alt={`${user?.name || 'User'} profile`} /> : getInitials(user?.name || 'User')}</div>
                   <div><div className="font-nunito font-bold text-lg text-clay-foreground">{user?.name}</div><div className="text-sm text-clay-muted">{user?.email}</div><div className="text-xs text-clay-muted mt-1">Joined {new Date(user?.joinedAt).toLocaleDateString()}</div></div>
                 </div>
                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">

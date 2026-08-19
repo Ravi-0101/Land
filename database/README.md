@@ -5,7 +5,9 @@
 1. Create a Supabase project.
 2. Open the SQL Editor and run `database/schema.sql`.
 3. Enable email authentication in Supabase Auth.
-4. Add a profile row for each authenticated user in `public.profiles`.
+4. Add a profile row for each authenticated user in `public.profiles`. The `avatar` column stores the profile picture URL or data URL used by the account profile.
+
+If the database was created from an older version of the schema, run `database/schema.sql` again. The schema includes an idempotent migration for the `profiles.avatar` column.
 
 ## 2. Connect the website
 

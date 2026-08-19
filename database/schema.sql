@@ -19,6 +19,8 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+alter table public.profiles add column if not exists avatar text;
+
 create table if not exists public.listings (
   id text primary key,
   seller_id uuid not null references public.profiles(id) on delete cascade,
