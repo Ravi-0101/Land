@@ -27,6 +27,7 @@ create table if not exists public.listings (
   title text not null,
   location text not null,
   price numeric(14, 2) not null default 0 check (price >= 0),
+  currency text not null default 'INR' check (currency = 'INR'),
   size text,
   type text not null check (type in ('Residential', 'Commercial', 'Agricultural', 'Industrial', 'Plot')),
   description text,
@@ -40,6 +41,10 @@ create table if not exists public.listings (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.listings add column if not exists currency text not null default 'INR';
+alter table public.listings drop constraint if exists listings_currency_check;
+alter table public.listings add constraint listings_currency_check check (currency = 'INR');
 
 create table if not exists public.listing_features (
   listing_id text not null references public.listings(id) on delete cascade,

@@ -328,6 +328,7 @@ const loadDatabaseListings = async () => {
     sellerId: listing.seller_id,
     seller: listing.profiles?.name || 'ClayEstates seller',
     sellerAvatar: listing.profiles?.avatar || '',
+    currency: listing.currency || 'INR',
   }));
 };
 const saveDatabaseListing = async (listing) => {
@@ -338,6 +339,7 @@ const saveDatabaseListing = async (listing) => {
     title: listing.title,
     location: listing.location,
     price: listing.price,
+    currency: 'INR',
     size: listing.size,
     type: listing.type,
     description: listing.description,
