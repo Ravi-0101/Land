@@ -566,7 +566,9 @@ function App() {
   const [toast, setToast] = useState(null);
   const [isProfileEditing, setIsProfileEditing] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', address: '', city: '', state: '', postalCode: '', phone: '', whatsapp: '', preferredContact: 'Phone', bio: '', languages: '', avatar: '' });
-  const profileScrollY = useRef(0);
+  const profileScrollY = useRef(null);
+  const profileCameraInput = useRef(null);
+  const profileGalleryInput = useRef(null);
   const [showListForm, setShowListForm] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
   const [screenSize, setScreenSize] = useState('Desktop');
@@ -634,7 +636,10 @@ function App() {
   }, [user]);
 
   useLayoutEffect(() => {
-    if (isProfileEditing) window.scrollTo(0, profileScrollY.current);
+    const activeElement = document.activeElement;
+    if (isProfileEditing && profileScrollY.current !== null && activeElement?.closest('#profile-form')) {
+      window.scrollTo(0, profileScrollY.current);
+    }
   }, [isProfileEditing, profileForm]);
 
   const handleProfileImageChange = async (event) => {
@@ -1667,15 +1672,20 @@ function App() {
               <button onClick={() => setIsProfileEditing(!isProfileEditing)} className="clay-btn clay-btn-outline clay-btn-sm text-sm">{isProfileEditing ? 'Close' : 'Edit Profile'}</button>
             </div>
             {isProfileEditing ? (
-              <form onFocusCapture={() => { profileScrollY.current = window.scrollY; }} onSubmit={(event) => { event.preventDefault(); saveProfile(event); }} onKeyDown={(event) => { if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') event.preventDefault(); }} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <form id="profile-form" onFocusCapture={() => { profileScrollY.current = window.scrollY; }} onSubmit={(event) => { event.preventDefault(); saveProfile(event); }} onKeyDown={(event) => { if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') event.preventDefault(); }} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="form-group md:col-span-3 flex flex-col sm:flex-row sm:items-center gap-4 rounded-[20px] bg-white/50 p-4">
                   <div className="user-avatar w-20 h-20 text-2xl flex-shrink-0">
                     {profileForm.avatar ? <img src={profileForm.avatar} alt="Profile preview" /> : getInitials(profileForm.name || 'User')}
                   </div>
                   <div className="flex-1">
                     <label htmlFor="profile-avatar">Profile picture</label>
-                    <input id="profile-avatar" type="file" accept="image/*" capture="user" onChange={handleProfileImageChange} className="block w-full text-sm text-clay-muted file:mr-3 file:rounded-xl file:border-0 file:bg-[#7C3AED]/10 file:px-4 file:py-2 file:font-bold file:text-[#7C3AED] file:cursor-pointer" />
-                    <p className="text-xs text-clay-muted mt-2">Choose a photo from your device or take one with your camera.</p>
+                    <input id="profile-avatar-camera" ref={profileCameraInput} type="file" accept="image/*" capture="user" onChange={handleProfileImageChange} className="sr-only" />
+                    <input id="profile-avatar-gallery" ref={profileGalleryInput} type="file" accept="image/*" onChange={handleProfileImageChange} className="sr-only" />
+                    <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                      <button type="button" onClick={() => profileCameraInput.current?.click()} className="clay-btn clay-btn-outline clay-btn-sm text-sm w-full sm:w-auto">📷 Camera</button>
+                      <button type="button" onClick={() => profileGalleryInput.current?.click()} className="clay-btn clay-btn-secondary clay-btn-sm text-sm w-full sm:w-auto">🖼️ Gallery</button>
+                    </div>
+                    <p className="text-xs text-clay-muted mt-2">Take a new photo or choose one from your device.</p>
                   </div>
                 </div>
                 <div className="form-group"><label htmlFor="profile-name">Full name</label><input id="profile-name" type="text" value={profileForm.name} onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))} className="clay-input h-14 text-base" placeholder="Your full name" required /></div>
