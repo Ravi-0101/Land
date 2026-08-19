@@ -22,6 +22,8 @@ Before the Babel application script in `index.html`, define the public Supabase 
 </script>
 ```
 
+The anon key previously embedded in this page was invalid and returned `401 Invalid API key`. Paste the current public anon key from Supabase Project Settings > API into `anonKey`. Do not put a service-role key in the browser. Until a valid anon key is configured, the app intentionally uses localStorage mode without making failed database requests.
+
 The page will load active listings from Supabase when this object is configured. Without it, the existing localStorage demo mode remains available.
 
 ## Authentication note
