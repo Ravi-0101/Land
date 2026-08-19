@@ -292,6 +292,11 @@ const DEMO_ACCOUNT = {
 };
 const DEFAULT_PROPERTY_IMAGE = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&h=400&fit=crop';
 const sanitizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+const normalizeLanguageName = (language) => {
+  const value = sanitizeText(language);
+  const shortcuts = { en: 'English', eng: 'English', ta: 'Tamil', tam: 'Tamil', te: 'Telugu', tel: 'Telugu', hi: 'Hindi', hin: 'Hindi' };
+  return shortcuts[value.toLowerCase()] || value;
+};
 const normalizeListingForDisplay = (listing) => {
   if (!listing || typeof listing !== 'object') return null;
   const title = sanitizeText(listing.title);
@@ -311,8 +316,13 @@ const normalizeListingForDisplay = (listing) => {
     size,
     price,
     features,
+    images: Array.isArray(listing.images) && listing.images.length > 0 ? listing.images : [listing.image || DEFAULT_PROPERTY_IMAGE],
+    languages: Array.isArray(listing.languages) && listing.languages.length > 0
+      ? listing.languages.map(normalizeLanguageName).filter(Boolean)
+      : (listing.isUserListing ? [] : ['English']),
     contact: {
       phone: sanitizeText(listing.contact?.phone),
+      whatsapp: sanitizeText(listing.contact?.whatsapp),
       email: sanitizeText(listing.contact?.email),
       website: sanitizeText(listing.contact?.website),
     },
@@ -436,8 +446,16 @@ const AuthProvider = ({ children }) => {
     // Favorites will be cleared by the App component's effect
   };
 
+  const updateProfile = (profile) => {
+    if (!user) return { success: false, error: 'You must be signed in to update your profile.' };
+    const updatedUser = { ...user, ...profile };
+    localStorage.setItem('clay_user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+    return { success: true, user: updatedUser };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, signup, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
@@ -446,7 +464,7 @@ const useAuth = () => useContext(AuthContext);
 
 // ─── MAIN APP ──────────────────────────────────────────────
 function App() {
-  const { user, isAuthenticated, isLoading, login, signup, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, login, signup, logout, updateProfile } = useAuth();
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [favorites, setFavorites] = useState([]);
@@ -464,6 +482,8 @@ function App() {
   const [authName, setAuthName] = useState('');
   const [authError, setAuthError] = useState('');
   const [toast, setToast] = useState(null);
+  const [isProfileEditing, setIsProfileEditing] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', address: '', city: '', state: '', postalCode: '', phone: '', whatsapp: '', preferredContact: 'Phone', bio: '', languages: '' });
   const [showListForm, setShowListForm] = useState(false);
   const [editingListingId, setEditingListingId] = useState(null);
   const [screenSize, setScreenSize] = useState('Desktop');
@@ -478,6 +498,7 @@ function App() {
   const [listingForm, setListingForm] = useState({
     title: '', location: '', price: '', size: '', type: 'Residential',
     description: '', image: DEFAULT_PROPERTY_IMAGE,
+    images: [],
     features: '',
     contact: { phone: '', email: '', website: '' },
     plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' }
@@ -502,6 +523,58 @@ function App() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   }, []);
+
+  useEffect(() => {
+    setProfileForm({
+      name: user?.name || '',
+      address: user?.address || '',
+      city: user?.city || '',
+      state: user?.state || '',
+      postalCode: user?.postalCode || '',
+      phone: user?.phone || '',
+      whatsapp: user?.whatsapp || '',
+      preferredContact: user?.preferredContact || 'Phone',
+      bio: user?.bio || '',
+      languages: Array.isArray(user?.languages) ? user.languages.join(', ') : (user?.languages || ''),
+    });
+  }, [user]);
+
+  const saveProfile = (event) => {
+    event.preventDefault();
+    const result = updateProfile({
+      name: profileForm.name.trim(),
+      address: profileForm.address.trim(),
+      city: profileForm.city.trim(),
+      state: profileForm.state.trim(),
+      postalCode: profileForm.postalCode.trim(),
+      phone: profileForm.phone.trim(),
+      whatsapp: profileForm.whatsapp.trim(),
+      preferredContact: profileForm.preferredContact,
+      bio: profileForm.bio.trim(),
+      languages: profileForm.languages.split(',').map(normalizeLanguageName).filter(Boolean),
+    });
+    if (!result.success) {
+      showToast(result.error, 'error');
+      return;
+    }
+    setIsProfileEditing(false);
+    showToast('Profile information updated.', 'success');
+  };
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const accountLanguages = Array.isArray(user.languages) ? user.languages : [];
+    setUserListings(prev => prev.map(listing => listing.sellerId === user.id ? {
+      ...listing,
+      languages: accountLanguages,
+      contact: {
+        ...listing.contact,
+        phone: user.phone || '',
+        whatsapp: user.whatsapp || '',
+        email: user.email || '',
+      },
+    } : listing));
+  }, [user?.id, user?.languages, user?.phone, user?.whatsapp, user?.email]);
 
   // ─── FAVORITES (per user) ──────────────────────────────
   const getFavoritesKey = useCallback(() => {
@@ -601,7 +674,7 @@ function App() {
       return;
     }
 
-    const normalizedImages = [listingForm.image || DEFAULT_PROPERTY_IMAGE];
+    const normalizedImages = listingForm.images?.length ? listingForm.images : [listingForm.image || DEFAULT_PROPERTY_IMAGE];
 
     const title = sanitizeText(listingForm.title);
     const location = sanitizeText(listingForm.location);
@@ -626,10 +699,12 @@ function App() {
       images: normalizedImages,
       features: String(listingForm.features || '').split(',').map(f => sanitizeText(f)).filter(Boolean),
       contact: {
-        phone: sanitizeText(listingForm.contact?.phone),
-        email: sanitizeText(listingForm.contact?.email),
+        phone: sanitizeText(user?.phone),
+        whatsapp: sanitizeText(user?.whatsapp),
+        email: sanitizeText(user?.email),
         website: sanitizeText(listingForm.contact?.website),
       },
+      languages: Array.isArray(user?.languages) ? user.languages : [],
       plotDetails: listingForm.type === 'Plot' ? {
         zoning: sanitizeText(listingForm.plotDetails?.zoning),
         titleStatus: sanitizeText(listingForm.plotDetails?.titleStatus),
@@ -650,6 +725,7 @@ function App() {
       setListingForm({
         title: '', location: '', price: '', size: '', type: 'Residential',
         description: '', image: DEFAULT_PROPERTY_IMAGE,
+        images: [],
         features: '',
         contact: { phone: '', email: '', website: '' },
         plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' }
@@ -674,6 +750,7 @@ function App() {
     setListingForm({
       title: '', location: '', price: '', size: '', type: 'Residential',
       description: '', image: DEFAULT_PROPERTY_IMAGE,
+      images: [],
       features: '',
       contact: { phone: '', email: '', website: '' },
       plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' }
@@ -688,7 +765,7 @@ function App() {
   }, [showToast]);
 
   // ─── ALL PROPERTIES ────────────────────────────────────
-  const allProperties = useMemo(() => [...PROPERTIES, ...userListings.filter(hasDisplayableListingData)], [userListings]);
+  const allProperties = useMemo(() => [...PROPERTIES, ...userListings.filter(hasDisplayableListingData)].map(normalizeListingForDisplay).filter(Boolean), [userListings]);
 
   // ─── FILTERED PROPERTIES ──────────────────────────────
   const filteredProperties = useMemo(() => {
@@ -818,7 +895,7 @@ function App() {
               <Icons.X className="w-5 h-5" />
             </button>
           </div>
-          <form onSubmit={handleListingSubmit} className="space-y-4">
+          <form onSubmit={handleListingSubmit} onKeyDown={(event) => { if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') event.preventDefault(); }} className="space-y-4">
             <div className="form-group">
               <label>Property Title</label>
               <input type="text" value={listingForm.title} onChange={(e) => setListingForm(prev => ({ ...prev, title: e.target.value }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="e.g. Sunset Valley Estate" />
@@ -878,26 +955,24 @@ function App() {
               <label>Description</label>
               <textarea value={listingForm.description} onChange={(e) => setListingForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Describe your property in detail..." />
             </div>
-            <div className="form-group">
+              <div className="form-group">
               <label>Features (comma separated)</label>
               <input type="text" value={listingForm.features} onChange={(e) => setListingForm(prev => ({ ...prev, features: e.target.value }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="e.g. Waterfront, Mountain View, Gated Community" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="form-group mb-0">
-                <label>Call Number</label>
-                <input type="tel" value={listingForm.contact?.phone || ''} onChange={(e) => setListingForm(prev => ({ ...prev, contact: { ...prev.contact, phone: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="+1 (555) 123-4567" />
+              <div className="form-group">
+                <label htmlFor="property-images">Property images</label>
+                <input id="property-images" type="file" accept="image/*" multiple onChange={async (e) => { try { const images = await readFilesAsDataUrls(e.target.files); setListingForm(prev => ({ ...prev, images })); } catch { showToast('Some images could not be loaded.', 'error'); } }} className="clay-input h-auto py-4 text-base" />
+                {listingForm.images?.length > 0 && <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-3">{listingForm.images.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`Property preview ${index + 1}`} className="w-full aspect-square object-cover rounded-[12px]" />)}</div>}
               </div>
-              <div className="form-group mb-0">
-                <label>Email</label>
-                <input type="email" value={listingForm.contact?.email || ''} onChange={(e) => setListingForm(prev => ({ ...prev, contact: { ...prev.contact, email: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="seller@email.com" />
-              </div>
+              <div className="rounded-[20px] bg-[#F5F3FF] p-4 text-sm text-clay-muted"><div className="font-bold text-clay-foreground mb-1">Account contact details</div><div>Call: {user?.phone || 'Add a contact number in your account profile'}</div><div>WhatsApp: {user?.whatsapp || 'Add a WhatsApp number in your account profile'}</div><div>Email: {user?.email || 'Not available'}</div><div>Languages: {user?.languages?.length ? user.languages.join(', ') : 'Add known languages in your account profile'}</div></div>
+            <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
               <div className="form-group mb-0">
                 <label>Website / Link</label>
                 <input type="url" value={listingForm.contact?.website || ''} onChange={(e) => setListingForm(prev => ({ ...prev, contact: { ...prev.contact, website: e.target.value } }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="https://yourwebsite.com" />
               </div>
             </div>
             <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => { setShowListForm(false); setEditingListingId(null); setListingForm({ title: '', location: '', price: '', size: '', type: 'Residential', description: '', image: DEFAULT_PROPERTY_IMAGE, features: '', contact: { phone: '', email: '', website: '' }, plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' } }); }} className="clay-btn clay-btn-secondary flex-1 text-sm">Cancel</button>
+              <button type="button" onClick={() => { setShowListForm(false); setEditingListingId(null); setListingForm({ title: '', location: '', price: '', size: '', type: 'Residential', description: '', image: DEFAULT_PROPERTY_IMAGE, images: [], features: '', contact: { phone: '', email: '', website: '' }, plotDetails: { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' } }); }} className="clay-btn clay-btn-secondary flex-1 text-sm">Cancel</button>
               <button type="submit" className="clay-btn clay-btn-primary flex-1 text-sm">{editingListingId ? 'Update Property' : 'List Property'}</button>
             </div>
           </form>
@@ -1066,6 +1141,7 @@ function App() {
             </div>
             <div className="flex gap-1 text-xs text-clay-muted"><span>🕐 {new Date(property.listedAt).toLocaleDateString()}</span></div>
           </div>
+          {property.languages?.length > 0 && <div className="mt-3 flex items-center gap-2 text-xs text-clay-muted"><span className="font-bold text-clay-foreground">🌐 Speaks:</span><span className="line-clamp-1">{property.languages.join(', ')}</span></div>}
           {isUserListing && isAuthenticated && user?.id === property.sellerId && (
             <div className="mt-2 flex gap-2"><button onClick={(e) => { e.stopPropagation(); deleteUserListing(property.id); }} className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors">Remove Listing</button></div>
           )}
@@ -1321,7 +1397,7 @@ function App() {
               {property.description && <div className="mt-6"><h3 className="font-nunito font-extrabold text-xl text-clay-foreground mb-2">Description</h3><p className="text-clay-muted text-base sm:text-lg leading-relaxed">{property.description}</p></div>}
               <div className="mt-6 flex flex-col sm:flex-row gap-4">
                 <a href={property.contact?.phone ? `tel:${property.contact.phone.replace(/[^\d+]/g, '')}` : '#'} className={`clay-btn flex-1 ${property.contact?.phone ? 'clay-btn-primary' : 'clay-btn-secondary opacity-50 pointer-events-none'}`}><Icons.Phone className="w-5 h-5 mr-2" /> Contact Seller</a>
-                <a href={property.contact?.phone ? `https://wa.me/${property.contact.phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent('Hi, I am interested in your property listing. Can you share more details?')}` : '#'} target={property.contact?.phone ? '_blank' : undefined} rel={property.contact?.phone ? 'noreferrer' : undefined} className={`clay-btn flex-1 ${property.contact?.phone ? 'clay-btn-secondary' : 'clay-btn-secondary opacity-50 pointer-events-none'}`}><Icons.Mail className="w-5 h-5 mr-2" /> Send Message</a>
+                <a href={(property.contact?.whatsapp || property.contact?.phone) ? `https://wa.me/${(property.contact.whatsapp || property.contact.phone).replace(/[^\d]/g, '')}?text=${encodeURIComponent('Hi, I am interested in your property listing. Can you share more details?')}` : '#'} target={(property.contact?.whatsapp || property.contact?.phone) ? '_blank' : undefined} rel={(property.contact?.whatsapp || property.contact?.phone) ? 'noreferrer' : undefined} className={`clay-btn flex-1 ${(property.contact?.whatsapp || property.contact?.phone) ? 'clay-btn-secondary' : 'clay-btn-secondary opacity-50 pointer-events-none'}`}><Icons.Mail className="w-5 h-5 mr-2" /> Send Message</a>
                 <a href={property.contact?.website ? property.contact.website : '#'} target={property.contact?.website ? '_blank' : undefined} rel={property.contact?.website ? 'noreferrer' : undefined} className={`clay-btn flex-1 ${property.contact?.website ? 'clay-btn-outline' : 'clay-btn-outline opacity-50 pointer-events-none'}`}><Icons.Map className="w-5 h-5 mr-2" /> Visit Link</a>
                 <button onClick={() => setShowMortgage(true)} className="clay-btn clay-btn-outline flex-1"><Icons.Calculator className="w-5 h-5 mr-2" /> Calculate Mortgage</button>
               </div>
@@ -1335,6 +1411,7 @@ function App() {
                 )}</div>
                 <div className="ml-auto flex gap-1"><Icons.Star className="w-5 h-5 text-[#F59E0B] fill-[#F59E0B]" /><span className="font-bold">{property.rating || 'New'}</span></div>
               </div>
+              {property.languages?.length > 0 && <div className="mt-4 rounded-[20px] bg-[#F5F3FF] p-4 border border-[#7C3AED]/10"><div className="text-xs font-bold uppercase tracking-wide text-clay-muted mb-2">Seller languages</div><div className="flex flex-wrap gap-2">{property.languages.map(language => <span key={language} className="px-3 py-1.5 rounded-full bg-white text-sm font-bold text-[#7C3AED] shadow-clay-pressed">🌐 {language}</span>)}</div></div>}
               {isUserListing && isAuthenticated && user?.id === property.sellerId && (
                 <div className="mt-4 flex justify-end"><button onClick={() => { deleteUserListing(property.id); onBack(); }} className="text-sm font-bold text-red-500 hover:text-red-600 transition-colors flex items-center gap-2"><Icons.X className="w-4 h-4" /> Remove this listing</button></div>
               )}
@@ -1407,6 +1484,7 @@ function App() {
                           type: p.type || 'Residential',
                           description: p.description,
                           image: p.image,
+                          images: p.images || [p.image].filter(Boolean),
                           features: (p.features || []).join(', '),
                           plotDetails: p.plotDetails || { zoning: '', titleStatus: '', access: '', utilities: '', soil: '' }
                         });
@@ -1450,15 +1528,41 @@ function App() {
             ))}
           </div>
           <div className="mt-6 clay-card p-4 sm:p-6 rounded-[28px] sm:rounded-[32px] reveal">
-            <h3 className="font-nunito font-extrabold text-xl sm:text-2xl text-clay-foreground mb-4">👤 Account</h3>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-              <div className="flex items-center gap-4">
-                <div className="user-avatar w-16 h-16 text-xl">{getInitials(user?.name || 'User')}</div>
-                <div><div className="font-nunito font-bold text-lg text-clay-foreground">{user?.name}</div><div className="text-sm text-clay-muted">{user?.email}</div><div className="text-xs text-clay-muted mt-1">Joined {new Date(user?.joinedAt).toLocaleDateString()}</div></div>
-              </div>
-              <div className="flex-1" />
-              <button onClick={() => { logout(); setCurrentPage('home'); showToast('Signed out successfully.', 'info'); }} className="clay-btn clay-btn-outline text-sm"><Icons.LogOut className="w-4 h-4 mr-1.5" /> Sign Out</button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              <h3 className="font-nunito font-extrabold text-xl sm:text-2xl text-clay-foreground">👤 Account</h3>
+              <button onClick={() => setIsProfileEditing(!isProfileEditing)} className="clay-btn clay-btn-outline clay-btn-sm text-sm">{isProfileEditing ? 'Close' : 'Edit Profile'}</button>
             </div>
+            {isProfileEditing ? (
+              <form onSubmit={(event) => { event.preventDefault(); saveProfile(event); }} onKeyDown={(event) => { if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') event.preventDefault(); }} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="form-group"><label htmlFor="profile-name">Full name</label><input id="profile-name" type="text" value={profileForm.name} onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))} className="clay-input h-14 text-base" placeholder="Your full name" required /></div>
+                <div className="form-group md:col-span-2"><label htmlFor="profile-address">Street address</label><input id="profile-address" type="text" value={profileForm.address} onChange={(e) => setProfileForm(prev => ({ ...prev, address: e.target.value }))} className="clay-input h-14 text-base" placeholder="Street and building number" /></div>
+                <div className="form-group"><label htmlFor="profile-city">City</label><input id="profile-city" type="text" value={profileForm.city} onChange={(e) => setProfileForm(prev => ({ ...prev, city: e.target.value }))} className="clay-input h-14 text-base" placeholder="City" /></div>
+                <div className="form-group"><label htmlFor="profile-state">State / region</label><input id="profile-state" type="text" value={profileForm.state} onChange={(e) => setProfileForm(prev => ({ ...prev, state: e.target.value }))} className="clay-input h-14 text-base" placeholder="State or region" /></div>
+                <div className="form-group"><label htmlFor="profile-postal-code">Postal code</label><input id="profile-postal-code" type="text" value={profileForm.postalCode} onChange={(e) => setProfileForm(prev => ({ ...prev, postalCode: e.target.value }))} className="clay-input h-14 text-base" placeholder="Postal code" /></div>
+                <div className="form-group"><label htmlFor="profile-phone">Contact number</label><input id="profile-phone" type="tel" value={profileForm.phone} onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))} className="clay-input h-14 text-base" placeholder="+1 (555) 123-4567" /></div>
+                <div className="form-group"><label htmlFor="profile-whatsapp">WhatsApp number</label><input id="profile-whatsapp" type="tel" value={profileForm.whatsapp} onChange={(e) => setProfileForm(prev => ({ ...prev, whatsapp: e.target.value }))} className="clay-input h-14 text-base" placeholder="+1 (555) 123-4567" /></div>
+                <div className="form-group"><label htmlFor="profile-preferred-contact">Preferred contact</label><select id="profile-preferred-contact" value={profileForm.preferredContact} onChange={(e) => setProfileForm(prev => ({ ...prev, preferredContact: e.target.value }))}><option>Phone</option><option>WhatsApp</option><option>Email</option></select></div>
+                <div className="form-group md:col-span-3"><label htmlFor="profile-bio">About you</label><textarea id="profile-bio" value={profileForm.bio} onChange={(e) => setProfileForm(prev => ({ ...prev, bio: e.target.value }))} className="min-h-[100px]" placeholder="Tell buyers or sellers a little about yourself" maxLength="240" /></div>
+                <div className="form-group md:col-span-3"><label htmlFor="profile-languages">Known languages</label><input id="profile-languages" type="text" value={profileForm.languages} onChange={(e) => setProfileForm(prev => ({ ...prev, languages: e.target.value }))} className="clay-input h-14 text-base" placeholder="Enter languages separated by commas, for example: English, Tamil, Telugu, Hindi" /></div>
+                <div className="flex items-end gap-2 md:col-span-3"><button type="submit" className="clay-btn clay-btn-primary clay-btn-sm text-sm flex-1">Save Information</button><button type="button" onClick={() => setIsProfileEditing(false)} className="clay-btn clay-btn-secondary clay-btn-sm text-sm">Cancel</button></div>
+              </form>
+            ) : (
+              <div className="flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6">
+                <div className="flex items-center gap-4 min-w-[220px]">
+                  <div className="user-avatar w-16 h-16 text-xl">{getInitials(user?.name || 'User')}</div>
+                  <div><div className="font-nunito font-bold text-lg text-clay-foreground">{user?.name}</div><div className="text-sm text-clay-muted">{user?.email}</div><div className="text-xs text-clay-muted mt-1">Joined {new Date(user?.joinedAt).toLocaleDateString()}</div></div>
+                </div>
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                  <div className="bg-white/50 rounded-[18px] p-3 sm:col-span-2"><div className="text-xs font-bold text-clay-muted uppercase">Address</div><div className="font-medium mt-1">{[user?.address, user?.city, user?.state, user?.postalCode].filter(Boolean).join(', ') || 'Not added'}</div></div>
+                  <div className="bg-white/50 rounded-[18px] p-3"><div className="text-xs font-bold text-clay-muted uppercase">Contact</div>{user?.phone ? <a href={`tel:${user.phone.replace(/[^\d+]/g, '')}`} className="font-medium mt-1 block hover:text-[#7C3AED]">{user.phone}</a> : <div className="font-medium mt-1">Not added</div>}</div>
+                  <div className="bg-white/50 rounded-[18px] p-3"><div className="text-xs font-bold text-clay-muted uppercase">WhatsApp</div>{user?.whatsapp ? <a href={`https://wa.me/${user.whatsapp.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer" className="font-medium mt-1 block text-[#10B981] hover:underline">Message on WhatsApp</a> : <div className="font-medium mt-1">Not added</div>}</div>
+                  <div className="bg-white/50 rounded-[18px] p-3 sm:col-span-2"><div className="text-xs font-bold text-clay-muted uppercase">About</div><div className="font-medium mt-1">{user?.bio || 'Add a short profile description'}</div></div>
+                  <div className="bg-white/50 rounded-[18px] p-3"><div className="text-xs font-bold text-clay-muted uppercase">Preferred contact</div><div className="font-medium mt-1">{user?.preferredContact || 'Phone'}</div></div>
+                  <div className="bg-white/50 rounded-[18px] p-3 sm:col-span-2"><div className="text-xs font-bold text-clay-muted uppercase">Known languages</div><div className="font-medium mt-1">{user?.languages?.length ? user.languages.join(', ') : 'Not added'}</div></div>
+                </div>
+                <button onClick={() => { logout(); setCurrentPage('home'); showToast('Signed out successfully.', 'info'); }} className="clay-btn clay-btn-outline text-sm"><Icons.LogOut className="w-4 h-4 mr-1.5" /> Sign Out</button>
+              </div>
+            )}
           </div>
         </div>
       </div>
