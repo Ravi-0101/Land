@@ -245,7 +245,7 @@ const STATS = [
   { icon: '🏡', value: '12,000+', label: 'Properties' },
   { icon: '👥', value: '50,000+', label: 'Active Users' },
   { icon: '💼', value: '8,500+', label: 'Sellers' },
-  { icon: '🎯', value: '$45B+', label: 'Land Value' }
+  { icon: '🎯', value: '₹45B+', label: 'Land Value' }
 ];
 
 // ─── ICONS ──────────────────────────────────────────────────
@@ -270,9 +270,9 @@ const Icons = {
 
 // ─── HELPERS ──────────────────────────────────────────────
 const formatPrice = (num) => {
-  if (num >= 1000000) return `$${(num/1000000).toFixed(1)}M`;
-  if (num >= 1000) return `$${(num/1000).toFixed(0)}K`;
-  return `$${num}`;
+  if (num >= 1000000) return `₹${(num/1000000).toFixed(1)}M`;
+  if (num >= 1000) return `₹${(num/1000).toFixed(0)}K`;
+  return `₹${num}`;
 };
 const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1042,7 +1042,7 @@ function App() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="form-group">
-                <label>Price ($)</label>
+                <label>Price (₹)</label>
                 <input type="number" value={listingForm.price} onChange={(e) => setListingForm(prev => ({ ...prev, price: e.target.value }))} className="clay-input h-14 rounded-[20px] text-base" placeholder="850000" />
               </div>
               <div className="form-group">
@@ -1135,16 +1135,16 @@ function App() {
             <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/60 shadow-clay-button flex items-center justify-center hover:shadow-clay-button-hover transition-all clay-squish"><Icons.X className="w-5 h-5" /></button>
           </div>
           <div className="space-y-4">
-            <div><label className="block text-sm font-bold text-clay-foreground mb-1">Property Price ($)</label><input type="number" value={mortgageData.price} onChange={(e) => handleChange('price', e.target.value)} className="clay-input h-14 rounded-[20px] text-base" min="0" /></div>
+            <div><label className="block text-sm font-bold text-clay-foreground mb-1">Property Price (₹)</label><input type="number" value={mortgageData.price} onChange={(e) => handleChange('price', e.target.value)} className="clay-input h-14 rounded-[20px] text-base" min="0" /></div>
             <div className="grid grid-cols-2 gap-4">
               <div><label className="block text-sm font-bold text-clay-foreground mb-1">Down Payment (%)</label><input type="number" value={mortgageData.down} onChange={(e) => handleChange('down', e.target.value)} className="clay-input h-14 rounded-[20px] text-base" min="0" max="100" /></div>
               <div><label className="block text-sm font-bold text-clay-foreground mb-1">Interest Rate (%)</label><input type="number" value={mortgageData.rate} onChange={(e) => handleChange('rate', e.target.value)} className="clay-input h-14 rounded-[20px] text-base" min="0" step="0.1" /></div>
             </div>
             <div><label className="block text-sm font-bold text-clay-foreground mb-1">Term (years)</label><input type="number" value={mortgageData.term} onChange={(e) => handleChange('term', e.target.value)} className="clay-input h-14 rounded-[20px] text-base" min="1" max="40" /></div>
             <div className="bg-white/40 p-4 sm:p-6 rounded-[24px] shadow-clay-pressed mt-4">
-              <div className="flex items-center justify-between"><span className="text-clay-muted font-medium">Monthly Payment</span><span className="font-nunito font-black text-2xl sm:text-3xl text-[#7C3AED]">${payment.toFixed(0)}</span></div>
-              <div className="flex items-center justify-between mt-2 text-sm"><span className="text-clay-muted">Total Interest</span><span className="font-bold text-clay-foreground">${totalInterest.toFixed(0)}</span></div>
-              <div className="flex items-center justify-between mt-1 text-sm"><span className="text-clay-muted">Total Cost</span><span className="font-bold text-clay-foreground">${totalCost.toFixed(0)}</span></div>
+              <div className="flex items-center justify-between"><span className="text-clay-muted font-medium">Monthly Payment</span><span className="font-nunito font-black text-2xl sm:text-3xl text-[#7C3AED]">₹{payment.toFixed(0)}</span></div>
+              <div className="flex items-center justify-between mt-2 text-sm"><span className="text-clay-muted">Total Interest</span><span className="font-bold text-clay-foreground">₹{totalInterest.toFixed(0)}</span></div>
+              <div className="flex items-center justify-between mt-1 text-sm"><span className="text-clay-muted">Total Cost</span><span className="font-bold text-clay-foreground">₹{totalCost.toFixed(0)}</span></div>
             </div>
             <div className="flex gap-3">
               <button onClick={onClose} className="clay-btn clay-btn-secondary flex-1 text-sm">Close</button>
@@ -1473,7 +1473,7 @@ function App() {
         {isFilterOpen && (
           <div className="clay-card p-4 sm:p-6 mb-6 sm:mb-8 rounded-[24px] sm:rounded-[32px] flex flex-wrap items-center gap-4 reveal">
             <div className="flex items-center gap-2"><span className="text-sm font-bold text-clay-muted">Type:</span><select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="clay-input h-12 px-4 rounded-[16px] text-sm bg-[#EFEBF5] shadow-clay-pressed focus:bg-white w-auto min-w-[140px] appearance-none cursor-pointer" style={{ paddingRight:'36px', backgroundImage:'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23635F69%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E")', backgroundPosition:'right 10px center', backgroundRepeat:'no-repeat', backgroundSize:'16px' }}><option value="all">All Types</option><option value="Residential">🏡 Residential</option><option value="Commercial">🏢 Commercial</option><option value="Agricultural">🌾 Agricultural</option><option value="Industrial">🏭 Industrial</option><option value="Plot">📐 Plot</option></select></div>
-            <div className="flex items-center gap-2"><span className="text-sm font-bold text-clay-muted">Price:</span><select value={filterPrice} onChange={(e) => setFilterPrice(e.target.value)} className="clay-input h-12 px-4 rounded-[16px] text-sm bg-[#EFEBF5] shadow-clay-pressed focus:bg-white w-auto min-w-[140px] appearance-none cursor-pointer" style={{ paddingRight:'36px', backgroundImage:'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23635F69%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E")', backgroundPosition:'right 10px center', backgroundRepeat:'no-repeat', backgroundSize:'16px' }}><option value="all">All Prices</option><option value="under250k">Under $250K</option><option value="250k-500k">$250K – $500K</option><option value="500k-1m">$500K – $1M</option><option value="over1m">Over $1M</option></select></div>
+            <div className="flex items-center gap-2"><span className="text-sm font-bold text-clay-muted">Price:</span><select value={filterPrice} onChange={(e) => setFilterPrice(e.target.value)} className="clay-input h-12 px-4 rounded-[16px] text-sm bg-[#EFEBF5] shadow-clay-pressed focus:bg-white w-auto min-w-[140px] appearance-none cursor-pointer" style={{ paddingRight:'36px', backgroundImage:'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23635F69%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E")', backgroundPosition:'right 10px center', backgroundRepeat:'no-repeat', backgroundSize:'16px' }}><option value="all">All Prices</option><option value="under250k">Under ₹250K</option><option value="250k-500k">₹250K – ₹500K</option><option value="500k-1m">₹500K – ₹1M</option><option value="over1m">Over ₹1M</option></select></div>
             <button onClick={() => { setFilterType('all'); setFilterPrice('all'); setSearchQuery(''); }} className="text-sm font-bold text-clay-muted hover:text-[#7C3AED] transition-colors">Clear All</button>
           </div>
         )}
